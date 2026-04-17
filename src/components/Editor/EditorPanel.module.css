@@ -1,0 +1,107 @@
+.panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.tab {
+  flex: 1; padding: 9px 0; font-size: 11px; font-weight: 600;
+  color: var(--text-3); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition), border-color var(--transition);
+}
+.tab:hover { color: var(--text-2); }
+.tabActive { color: #ddb0ff; border-bottom-color: rgba(191,90,242,0.7); }
+
+/* ── Scroll area below tabs ── */
+.panel > *:not(.tabs) { overflow-y: auto; }
+
+/* ── Group ── */
+.group {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.groupTitle {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.10em; color: var(--text-3); margin-bottom: 10px;
+}
+
+/* ── Geometry buttons ── */
+.btnRow { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.toolBtn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 6px; border-radius: var(--radius-sm);
+  font-size: 9px; font-weight: 600; color: var(--text-2);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.11);
+  transition: all var(--transition); cursor: pointer;
+}
+.toolBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
+.toolBtnActive { background: rgba(191,90,242,0.20) !important; border-color: rgba(191,90,242,0.40) !important; color: #ddb0ff !important; }
+
+/* ── Slider ── */
+.sliderRow { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.sliderRow:last-child { margin-bottom: 0; }
+.sliderTop { display: flex; justify-content: space-between; }
+.sliderLabel { font-size: 10px; color: var(--text-2); font-weight: 500; }
+.sliderVal {
+  font-size: 9px; color: var(--text-3); font-weight: 600;
+  background: rgba(255,255,255,0.07); padding: 1px 5px;
+  border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.09);
+  min-width: 28px; text-align: center;
+}
+.sliderTrack { position: relative; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.10); }
+.sliderFill {
+  position: absolute; left: 0; top: 0; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg,rgba(191,90,242,0.7),rgba(94,92,230,0.7));
+  pointer-events: none;
+}
+.sliderInput { position: absolute; inset: -5px 0; width: 100%; height: 14px; opacity: 0; cursor: pointer; margin: 0; }
+
+/* ── Crop ── */
+.cropRow { display: flex; gap: 5px; }
+.cropBtn { flex: 1; }
+.cropResetBtn { width: 48px; flex-shrink: 0; color: rgba(255,107,98,0.8) !important; }
+.cropResetBtn:hover { background: rgba(255,69,58,0.18) !important; border-color: rgba(255,69,58,0.34) !important; color: #ff6b62 !important; }
+.cropInfo {
+  margin-top: 7px; font-size: 9px; color: #ddb0ff; font-weight: 600;
+  text-align: center; letter-spacing: 0.06em;
+  background: rgba(191,90,242,0.12); border: 1px solid rgba(191,90,242,0.22);
+  border-radius: var(--radius-pill); padding: 3px 8px;
+}
+
+/* ── Reset ── */
+.resetBtn {
+  width: 100%; font-size: 10px; color: var(--text-3); text-align: center;
+  padding: 6px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+  transition: all var(--transition); cursor: pointer;
+}
+.resetBtn:hover { background: rgba(255,255,255,0.10); color: var(--text-2); }
+
+/* ── Export tab ── */
+.formatRow { display: flex; gap: 6px; margin-bottom: 4px; }
+.fmtBtn {
+  flex: 1; padding: 6px; border-radius: var(--radius-sm);
+  font-size: 10px; font-weight: 700; color: var(--text-3);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.11);
+  transition: all var(--transition); cursor: pointer;
+}
+.fmtBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
+.fmtBtnActive { background: rgba(191,90,242,0.22); border-color: rgba(191,90,242,0.42); color: #ddb0ff; }
+
+.exportBtns { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.saveBtn {
+  width: 100%; padding: 8px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  background: rgba(52,199,89,0.22); border: 1px solid rgba(52,199,89,0.38);
+  color: rgba(140,230,160,0.95); transition: all var(--transition);
+}
+.saveBtn:hover:not(:disabled) { background: rgba(52,199,89,0.34); }
+.saveBtn:disabled { opacity: 0.35; cursor: default; }
+.saveBtnOver { background: rgba(255,149,0,0.18); border-color: rgba(255,149,0,0.32); color: rgba(255,210,120,0.95); }
+.saveBtnOver:hover:not(:disabled) { background: rgba(255,149,0,0.30); }
+
+.savedMsg { font-size: 10px; text-align: center; color: rgba(140,230,160,0.9); margin-top: 6px; }
+.noEditsHint { font-size: 10px; color: var(--text-3); font-style: italic; text-align: center; margin-top: 10px; }

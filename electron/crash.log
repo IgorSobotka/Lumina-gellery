@@ -1,0 +1,8 @@
+[uncaughtException] TypeError [ERR_INVALID_STATE]: Invalid state: Controller is already closed
+    at new NodeError (node:internal/errors:405:5)
+    at ReadableStreamDefaultController.close (node:internal/webstreams/readablestream:1031:13)
+    at node:internal/deps/undici/undici:657:28
+    at node:internal/process/task_queues:140:7
+    at AsyncResource.runInAsyncScope (node:async_hooks:203:9)
+    at AsyncResource.runMicrotask (node:internal/process/task_queues:137:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)

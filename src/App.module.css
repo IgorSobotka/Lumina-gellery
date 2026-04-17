@@ -1,0 +1,58 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  background: transparent;
+}
+
+/* macOS vibrancy mode — subtle dark veil so gallery content is readable */
+.app.vibrancy {
+  background: transparent;
+}
+.app.vibrancy .body {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* ── Osobna warstwa tła — blur nie dotyka UI ── */
+.bg {
+  position: absolute;
+  inset: -60px;        /* overshoot żeby krawędzie blura były niewidoczne */
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  transition: filter 120ms ease;
+}
+
+/* Ambient glow overlay */
+.bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 320px at 30% 60%, rgba(255,255,255,0.12) 0%, transparent 70%),
+    radial-gradient(circle 220px at 75% 30%, rgba(255,120,80,0.09)  0%, transparent 70%);
+  animation: ambientShift 14s ease-in-out infinite alternate;
+}
+
+@keyframes ambientShift {
+  0%   { opacity: 0.7; transform: scale(1)    translate(0,0); }
+  100% { opacity: 1;   transform: scale(1.10) translate(18px,-12px); }
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

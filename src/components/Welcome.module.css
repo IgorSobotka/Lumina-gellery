@@ -1,0 +1,152 @@
+.wrap {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 40px; padding: 48px;
+}
+
+.hero { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+.logo {
+  font-size: 64px; line-height: 1;
+  background: linear-gradient(135deg, #bf5af2 0%, #0a84ff 50%, #30d158 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 28px rgba(255,255,255,0.85)) drop-shadow(0 0 60px rgba(255,255,255,0.45));
+  animation: logoPulse 4s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%,100% { filter: drop-shadow(0 0 20px rgba(255,255,255,0.65)) drop-shadow(0 0 50px rgba(255,255,255,0.35)); transform: scale(1); }
+  50%      { filter: drop-shadow(0 0 40px rgba(255,255,255,1.0))  drop-shadow(0 0 80px rgba(255,255,255,0.65)); transform: scale(1.06); }
+}
+
+.title { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-1); text-shadow: 0 2px 20px rgba(0,0,0,0.5); }
+.sub { font-size: 14px; color: var(--text-3); margin-bottom: 10px; }
+
+/* ── iOS 26 Liquid Glass CTA button ── */
+.openBtn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 34px; border-radius: var(--radius-pill);
+  font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.95);
+  position: relative; cursor: pointer; letter-spacing: 0.01em;
+  transition: transform 280ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 200ms ease, background 200ms ease;
+  isolation: isolate;
+
+  /* Frosted glass fill — no color, just translucent white */
+  background: rgba(255,255,255,0.13);
+  backdrop-filter: blur(40px) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.08);
+
+  /* Crisp specular border — brighter on top-left, dimmer on bottom-right */
+  border: 1px solid rgba(255,255,255,0.30);
+
+  /* Layered inset highlights + soft outer shadow */
+  box-shadow:
+    /* top specular edge */
+    inset 0  1.5px 0   rgba(255,255,255,0.55),
+    /* bottom inner shadow */
+    inset 0 -1px   0   rgba(0,0,0,0.18),
+    /* left specular */
+    inset  1px 0   0   rgba(255,255,255,0.22),
+    /* right inner shadow */
+    inset -1px 0   0   rgba(0,0,0,0.08),
+    /* depth shadow */
+    0  8px 24px rgba(0,0,0,0.35),
+    0  2px  6px rgba(0,0,0,0.20),
+    /* white glow — subtle lens effect */
+    0  0   32px rgba(255,255,255,0.07);
+}
+
+/* Top-half sheen — glass curvature highlight */
+.openBtn::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(to bottom,
+    rgba(255,255,255,0.22) 0%,
+    rgba(255,255,255,0.06) 45%,
+    transparent 100%
+  );
+  z-index: 1;
+}
+
+/* Prismatic specular — diagonal streak across face */
+.openBtn::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(118deg,
+    rgba(255,255,255,0.18) 0%,
+    rgba(255,255,255,0.08) 22%,
+    transparent 48%,
+    rgba(255,255,255,0.03) 72%,
+    transparent 100%
+  );
+  z-index: 2;
+}
+
+.openBtn > * { position: relative; z-index: 3; }
+
+.openBtn:hover {
+  transform: translateY(-3px) scale(1.035);
+  background: rgba(255,255,255,0.19);
+  box-shadow:
+    inset 0  1.5px 0   rgba(255,255,255,0.60),
+    inset 0 -1px   0   rgba(0,0,0,0.20),
+    inset  1px 0   0   rgba(255,255,255,0.25),
+    inset -1px 0   0   rgba(0,0,0,0.10),
+    0 16px 48px rgba(0,0,0,0.42),
+    0  4px 12px rgba(0,0,0,0.25),
+    0  0   40px rgba(255,255,255,0.10);
+}
+.openBtn:active {
+  transform: scale(0.97);
+  background: rgba(255,255,255,0.10);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.40),
+    inset 0 2px 8px rgba(0,0,0,0.25),
+    0 4px 12px rgba(0,0,0,0.30);
+}
+
+.hint { font-size: 12px; color: var(--text-3); }
+
+/* ── Recent panel — Liquid Glass ── */
+.recent {
+  width: 100%; max-width: 460px;
+  border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden;
+
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    inset 0  1.5px 0 var(--prism-top),
+    inset 0 -1px   0 var(--prism-bottom),
+    inset  1px 0   0 var(--prism-cool),
+    inset -1px 0   0 var(--prism-warm),
+    0 8px 32px rgba(0,0,0,0.28);
+}
+
+/* Lens shimmer on panel */
+.recent::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(120deg,
+    rgba(255,255,255,0.09) 0%,
+    rgba(255,255,255,0.04) 20%,
+    transparent 50%
+  );
+}
+
+.recentLabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-3); margin-bottom: 10px; padding: 0 4px; }
+.recentList { display: flex; flex-direction: column; gap: 2px; }
+
+.recentItem {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  color: var(--text-2); transition: all var(--transition);
+  text-align: left; border: 1px solid transparent; position: relative;
+}
+.recentItem:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.13);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+  color: var(--text-1); transform: translateX(3px);
+}
+.recentPath { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

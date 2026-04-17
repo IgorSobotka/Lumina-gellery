@@ -1,0 +1,541 @@
+.grid {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--cell));
+  gap: 12px; align-content: start;
+}
+
+/* ── Section labels ── */
+.sectionLabel {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-3); padding: 4px 2px 0;
+}
+
+.sectionDivider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 4px 0;
+}
+
+/* ── Folder card ── */
+.folderCard {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; cursor: pointer; border-radius: var(--radius); position: relative;
+  transition: transform var(--spring), box-shadow var(--transition);
+
+  backdrop-filter: blur(12px) saturate(180%) brightness(1.14);
+  -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.14);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow:
+    inset 0  1.5px 0 rgba(255,255,255,0.38),
+    inset 0 -1px   0 rgba(0,0,0,0.10),
+    inset  1px 0   0 rgba(180,220,255,0.10),
+    inset -1px 0   0 rgba(255,220,160,0.08),
+    0 4px 16px rgba(0,0,0,0.26);
+}
+
+.folderCard::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(125deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.04) 20%, transparent 50%);
+  opacity: 0; transition: opacity var(--transition);
+}
+
+.folderCard:hover::before { opacity: 1; }
+
+.folderCard:hover {
+  transform: translateY(-4px) scale(1.025);
+  border-color: rgba(255,255,255,0.38);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.45),
+    0 14px 40px rgba(0,0,0,0.42),
+    0 0 0 1px rgba(255,255,255,0.18),
+    0 0 24px rgba(255,255,255,0.12);
+}
+
+/* ── Deck container ── */
+.deck {
+  position: relative;
+  flex-shrink: 0;
+  will-change: transform;
+}
+
+/* Float wrapper — owns positional transform */
+.deckCardWrap {
+  position: absolute; inset: 0;
+  will-change: transform;
+}
+
+/* Float only on hover, each card at a different phase */
+@keyframes deckFloat {
+  0%, 100% { translate: 0 0px;   }
+  50%       { translate: 0 -3px; }
+}
+
+.folderCard:hover .deckCardWrap:nth-child(1) {
+  animation: deckFloat 2400ms ease-in-out infinite;
+  animation-delay: -300ms;
+}
+.folderCard:hover .deckCardWrap:nth-child(2) {
+  animation: deckFloat 2900ms ease-in-out infinite;
+  animation-delay: -1100ms;
+}
+.folderCard:hover .deckCardWrap:nth-child(3) {
+  animation: deckFloat 2200ms ease-in-out infinite;
+  animation-delay: -700ms;
+}
+
+/* Individual card in deck — pure visual shell, no positioning */
+.deckCard {
+  width: 100%; height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.22);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.40),
+    inset 0 1px 0 rgba(255,255,255,0.28);
+  background: rgba(30,26,48,0.85);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.deckImg {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Shine that travels with mouse on each mini card */
+.deckShine {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Folder icon inside fallback card */
+.folderIcon {
+  color: rgba(255,255,255,0.75);
+  filter: drop-shadow(0 4px 12px rgba(255,255,255,0.45));
+}
+
+/* Holographic shine — position via CSS vars set imperatively */
+.cardShine {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 10;
+  background: radial-gradient(circle at var(--sx, 50%) var(--sy, 50%), rgba(255,255,255,0.22) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.cardShineVisible { opacity: 1; }
+
+.folderName {
+  font-size: 12px; font-weight: 600; color: var(--text-1);
+  text-align: center; padding: 0 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
+}
+
+.folderCount {
+  font-size: 10px; color: var(--text-3); font-weight: 500;
+}
+
+/* ── Image card ── */
+.card {
+  display: flex; flex-direction: column;
+  cursor: pointer; border-radius: var(--radius);
+  overflow: hidden; position: relative;
+  transition: transform var(--spring), box-shadow var(--transition);
+
+  backdrop-filter: blur(6px) saturate(160%) brightness(1.10);
+  -webkit-backdrop-filter: blur(6px) saturate(160%) brightness(1.10);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.16);
+
+  box-shadow:
+    inset 0  1.5px 0 rgba(255,255,255,0.40),
+    inset 0 -1px   0 rgba(0,0,0,0.12),
+    inset  1px 0   0 rgba(180,220,255,0.08),
+    inset -1px 0   0 rgba(255,220,160,0.06),
+    0 4px 18px rgba(0,0,0,0.28);
+}
+
+.card::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(125deg,
+    rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.05) 18%, transparent 45%
+  );
+  opacity: 0; transition: opacity var(--transition);
+}
+
+.card:hover::before { opacity: 1; }
+
+.card:hover {
+  transform: translateY(-5px) scale(1.025);
+  border-color: rgba(255,255,255,0.38);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.45),
+    0 14px 45px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(255,255,255,0.12),
+    0 0 22px rgba(255,255,255,0.07);
+}
+
+.card:active { transform: translateY(-1px) scale(0.99); }
+
+.imgWrap { position: relative; flex: 1; overflow: hidden; background: rgba(0,0,0,0.18); }
+
+.img {
+  width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transition: opacity 280ms ease, transform var(--transition);
+}
+.img.loaded { opacity: 1; }
+.card:hover .img { transform: scale(1.05); }
+
+.overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 55%, rgba(0,0,0,0.60) 100%);
+  opacity: 0; transition: opacity var(--transition);
+  display: flex; align-items: flex-end; padding: 8px; z-index: 1;
+}
+.card:hover .overlay { opacity: 1; }
+
+.videoPlayBadge {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  z-index: 2; pointer-events: none;
+}
+
+.ext {
+  font-size: 9px; font-weight: 800; color: white; letter-spacing: 0.07em;
+  background: rgba(191,90,242,0.70);
+  border: 1px solid rgba(255,255,255,0.22);
+  padding: 2px 6px; border-radius: var(--radius-pill);
+}
+
+.name { padding: 6px 8px 2px; font-size: 11px; font-weight: 500; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { padding: 0 8px 4px; font-size: 10px; color: var(--text-3); }
+
+/* ── Selection ── */
+.cardSelected {
+  border-color: rgba(255,255,255,0.55) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.45),
+    0 0 0 2px rgba(255,255,255,0.20),
+    0 8px 28px rgba(0,0,0,0.38) !important;
+}
+
+.checkBox {
+  position: absolute; top: 7px; left: 7px; z-index: 5;
+  width: 20px; height: 20px; border-radius: 6px;
+  background: rgba(20,16,36,0.65); border: 1.5px solid rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity var(--transition), background var(--transition), border-color var(--transition);
+  backdrop-filter: blur(4px);
+}
+.card:hover .checkBox,
+.cardSelected .checkBox { opacity: 1; }
+.checkBoxOn {
+  background: rgba(191,90,242,0.85) !important;
+  border-color: rgba(191,90,242,1) !important;
+}
+
+/* ── Selection floating bar ── */
+.selBar {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: var(--radius-pill); z-index: 50;
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  background: rgba(18,12,36,0.92);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.16),
+    inset 0 -1px 0 rgba(0,0,0,0.20),
+    0 20px 56px rgba(0,0,0,0.60),
+    0 0 0 1px rgba(255,255,255,0.10);
+  animation: barPop 240ms cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+@keyframes barPop {
+  from { opacity:0; transform: translateX(-50%) translateY(14px) scale(0.94); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0)    scale(1);    }
+}
+
+/* count badge */
+.selCount {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 800; color: var(--text-1);
+  min-width: 28px;
+}
+
+/* separator */
+.selSep { width: 1px; height: 20px; background: rgba(255,255,255,0.12); flex-shrink: 0; }
+
+/* format */
+.selFmtRow { display: flex; gap: 3px; }
+.selFmtBtn {
+  padding: 4px 8px; border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 700; color: var(--text-3);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+  transition: all var(--transition); cursor: pointer;
+}
+.selFmtBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
+.selFmtActive { background: rgba(191,90,242,0.22); border-color: rgba(191,90,242,0.42); color: #ddb0ff; }
+
+/* destination button */
+.selDestBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 600; color: var(--text-3);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+  transition: all var(--transition); cursor: pointer; max-width: 160px;
+}
+.selDestBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-2); }
+.selDestSet { background: rgba(94,92,230,0.18) !important; border-color: rgba(94,92,230,0.38) !important; color: rgba(180,190,255,0.9) !important; }
+.selDestLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px; }
+.selDestClear { opacity: 0.55; font-size: 9px; flex-shrink: 0; padding: 0 2px; }
+.selDestClear:hover { opacity: 1; }
+
+/* export button */
+.selExportBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 700;
+  background: rgba(52,199,89,0.24); border: 1px solid rgba(52,199,89,0.42);
+  color: rgba(150,235,170,0.95); cursor: pointer; transition: all var(--transition);
+}
+.selExportBtn:hover { background: rgba(52,199,89,0.38); box-shadow: 0 0 16px rgba(52,199,89,0.20); }
+
+/* progress */
+.selProgress {
+  position: relative; width: 100px; height: 28px; border-radius: var(--radius-pill);
+  background: rgba(52,199,89,0.12); border: 1px solid rgba(52,199,89,0.30);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.selProgressBar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: rgba(52,199,89,0.28); border-radius: var(--radius-pill);
+  transition: width 200ms ease;
+}
+.selProgress span { position: relative; z-index: 1; font-size: 10px; font-weight: 700; color: rgba(150,235,170,0.9); }
+
+/* delete */
+.selDeleteBtn {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,107,98,0.75); background: rgba(255,69,58,0.10);
+  border: 1px solid rgba(255,69,58,0.22); transition: all var(--transition); cursor: pointer;
+}
+.selDeleteBtn:hover { background: rgba(255,69,58,0.26); color: #ff6b62; border-color: rgba(255,69,58,0.48); box-shadow: 0 0 14px rgba(255,69,58,0.18); }
+
+/* clear */
+.selClearBtn {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  font-size: 11px; color: var(--text-3);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.11);
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition); cursor: pointer;
+}
+.selClearBtn:hover { background: rgba(255,255,255,0.13); color: var(--text-2); }
+
+/* ── Bulk Export Panel ── */
+.bulkPanel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 290px; z-index: 200;
+  background: rgba(18,10,28,0.82);
+  backdrop-filter: blur(32px) saturate(180%);
+  border-left: 1px solid rgba(255,255,255,0.10);
+  box-shadow: -12px 0 48px rgba(0,0,0,0.55);
+  display: flex; flex-direction: column;
+  animation: bulkSlideIn 220ms cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes bulkSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.bulkHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+.bulkTitle { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); }
+.bulkClose {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text-3); cursor: pointer; border: none; background: transparent;
+  transition: background var(--transition), color var(--transition);
+}
+.bulkClose:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
+
+.bulkThumbGrid {
+  flex: 1; overflow-y: auto; padding: 12px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  align-content: start;
+}
+.bulkThumb {
+  width: 100%; aspect-ratio: 1; object-fit: cover;
+  border-radius: 6px; display: block;
+  background: rgba(255,255,255,0.04);
+}
+
+.bulkSection { padding: 10px 16px 0; }
+.bulkLabel { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+
+.bulkFmtRow { display: flex; gap: 4px; }
+.bulkFmtBtn {
+  flex: 1; padding: 5px 0; border-radius: var(--radius-pill); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.05em; border: 1px solid rgba(255,255,255,0.12); color: var(--text-2);
+  cursor: pointer; background: transparent; transition: all var(--transition);
+}
+.bulkFmtBtn:hover { background: rgba(255,255,255,0.10); color: var(--text-1); }
+.bulkFmtActive { background: rgba(191,90,242,0.22) !important; border-color: rgba(191,90,242,0.45) !important; color: #ddb0ff !important; }
+
+.bulkQualityRow {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px;
+}
+.bulkQualityLabel { font-size: 10px; color: var(--text-3); white-space: nowrap; }
+.bulkQualityVal { font-size: 10px; font-weight: 700; color: var(--text-2); white-space: nowrap; min-width: 28px; text-align: right; }
+.bulkQualityRange {
+  flex: 1; height: 3px; -webkit-appearance: none; appearance: none;
+  background: rgba(255,255,255,0.15); border-radius: 2px; outline: none; cursor: pointer;
+}
+.bulkQualityRange::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+  background: rgba(191,90,242,0.9); border: 2px solid rgba(255,255,255,0.7);
+  box-shadow: 0 0 6px rgba(191,90,242,0.5); cursor: pointer;
+}
+
+.bulkDestBtn {
+  width: 100%; display: flex; align-items: center; gap: 6px; padding: 7px 10px;
+  border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05); color: var(--text-2); font-size: 11px;
+  cursor: pointer; transition: all var(--transition); text-align: left;
+}
+.bulkDestBtn:hover { background: rgba(255,255,255,0.10); color: var(--text-1); }
+.bulkDestSet { background: rgba(94,92,230,0.18) !important; border-color: rgba(94,92,230,0.38) !important; color: rgba(180,190,255,0.9) !important; }
+.bulkDestLabel { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulkDestClear { opacity: 0.55; font-size: 9px; padding: 0 2px; }
+.bulkDestClear:hover { opacity: 1; }
+
+.bulkActions { padding: 12px 16px 20px; flex-shrink: 0; }
+.bulkExportBtn {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 0; border-radius: var(--radius-sm); font-size: 12px; font-weight: 700;
+  background: rgba(52,199,89,0.20); border: 1px solid rgba(52,199,89,0.38); color: rgba(130,240,160,0.95);
+  cursor: pointer; transition: all var(--transition); letter-spacing: 0.03em;
+}
+.bulkExportBtn:hover { background: rgba(52,199,89,0.35); box-shadow: 0 0 20px rgba(52,199,89,0.18); }
+
+.bulkProgress {
+  position: relative; width: 100%; height: 34px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.07); overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.bulkProgressBar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, rgba(52,199,89,0.45), rgba(52,199,89,0.65));
+  transition: width 180ms ease;
+}
+.bulkProgress span { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: rgba(150,235,170,0.9); }
+
+.tagRow {
+  display: flex; flex-wrap: nowrap; gap: 4px; align-items: center;
+  padding: 0 8px 6px; overflow: hidden;
+}
+
+.tagPill {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: var(--radius-pill);
+  border: 1px solid; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 70px;
+}
+
+.tagMore {
+  font-size: 9px; font-weight: 600; color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* ── States ── */
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.hint { color: var(--text-3); font-size: 14px; font-weight: 500; }
+.emptyIcon { font-size: 52px; opacity: 0.20; }
+
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── List view ── */
+.listView {
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.listFolderRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--text-2); font-size: 13px;
+  transition: background var(--transition);
+}
+.listFolderRow:hover { background: rgba(255,255,255,0.07); }
+
+.listRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 10px; border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition);
+  border: 1px solid transparent;
+}
+.listRow:hover { background: rgba(255,255,255,0.06); }
+.listRowSelected {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.16) !important;
+}
+
+.listCheckBox {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  background: rgba(20,16,36,0.65); border: 1.5px solid rgba(255,255,255,0.22);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity var(--transition), background var(--transition);
+}
+.listRow:hover .listCheckBox,
+.listRowSelected .listCheckBox { opacity: 1; }
+.listCheckBoxOn {
+  background: rgba(191,90,242,0.85) !important;
+  border-color: rgba(191,90,242,1) !important;
+}
+
+.listThumb {
+  width: 36px; height: 36px; border-radius: 5px; overflow: hidden;
+  flex-shrink: 0; background: rgba(0,0,0,0.20);
+}
+.listThumbImg {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+.listName {
+  flex: 1; min-width: 0;
+  font-size: 12px; font-weight: 500; color: var(--text-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.listExt {
+  font-size: 9px; font-weight: 800; color: white; letter-spacing: 0.07em;
+  background: rgba(191,90,242,0.60); border: 1px solid rgba(255,255,255,0.18);
+  padding: 2px 6px; border-radius: var(--radius-pill); flex-shrink: 0;
+}
+
+.listMeta {
+  font-size: 11px; color: var(--text-3); flex-shrink: 0; min-width: 60px; text-align: right;
+}
+
+.listDate {
+  font-size: 11px; color: var(--text-3); flex-shrink: 0; min-width: 90px; text-align: right;
+}

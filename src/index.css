@@ -1,0 +1,59 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Core glass recipe — applied directly on elements */
+  --glass-blur:   blur(18px) saturate(200%) brightness(1.18) contrast(1.06);
+  --glass-blur-sm: blur(10px) saturate(180%) brightness(1.14) contrast(1.04);
+  --glass-blur-xs: blur(6px)  saturate(160%) brightness(1.10);
+
+  /* Tints */
+  --glass-bg:       rgba(255,255,255, 0.06);
+  --glass-bg-light: rgba(255,255,255, 0.10);
+  --glass-bg-dark:  rgba(0,0,0, 0.18);
+
+  /* Prismatic edge colors (refraction simulation) */
+  --prism-top:    rgba(255,255,255, 0.55);   /* bright white — main specular */
+  --prism-cool:   rgba(180,220,255, 0.18);   /* blue  — cool refracted ray */
+  --prism-warm:   rgba(255,220,160, 0.14);   /* amber — warm refracted ray */
+  --prism-bottom: rgba(0,0,0, 0.14);         /* shadow on bottom edge */
+
+  /* Text */
+  --text-1: rgba(255,255,255, 0.95);
+  --text-2: rgba(255,255,255, 0.60);
+  --text-3: rgba(255,255,255, 0.30);
+
+  /* Accent */
+  --accent:       #bf5af2;
+  --accent-hover: #cc72f5;
+  --accent-glow:  rgba(191,90,242, 0.55);
+  --accent-glass: rgba(191,90,242, 0.22);
+
+  /* Layout */
+  --sidebar-w:   220px;
+  --titlebar-h:  40px;
+  --toolbar-h:   52px;
+  --radius:      14px;
+  --radius-sm:   8px;
+  --radius-xs:   5px;
+  --radius-pill: 100px;
+  --transition:  150ms cubic-bezier(0.25,0.46,0.45,0.94);
+  --spring:      280ms cubic-bezier(0.34,1.56,0.64,1);
+}
+
+html, body, #root { height: 100%; overflow: hidden; background: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  background: transparent;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+
+button { font-family: inherit; font-size: inherit; cursor: pointer; border: none; background: none; color: inherit; }
