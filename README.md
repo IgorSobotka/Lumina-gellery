@@ -1,47 +1,47 @@
-# Lumina Gallery
+# ✦ Lumina Gallery
 
-Piekna galeria zdiec na Windows i macOS. Zbudowana na Electron + React.
+A beautiful photo gallery for Windows and macOS. Built with Electron + React.
 
-## Wymagania
+## Requirements
 
-- [Node.js](https://nodejs.org/) — wersja 18 lub nowsza
+- [Node.js](https://nodejs.org/) — version 18 or higher
 
-## Instalacja i uruchomienie
+## Installation & Running
 
 ```bash
-# 1. Pobierz projekt
+# 1. Clone the project
 git clone https://github.com/IgorSobotka/Lumina-gellery.git
 cd Lumina-gellery
 
-# 2. Zainstaluj zaleznosci
+# 2. Install dependencies
 npm install
 
-# 3. Uruchom aplikacje
+# 3. Run the app
 npm run dev
 ```
 
-## Budowanie instalatora
+## Building
 
 ### Windows (.exe)
 ```bash
 npm run package:win
 ```
-Plik: `release/windows/Lumina Gallery Setup 0.1.0.exe`
+Output: `release/windows/Lumina Gallery Setup 0.1.0.exe`
 
 ### macOS (.dmg)
 ```bash
 npm run package:mac
 ```
-Plik: `release/macos/Lumina Gallery-0.1.0.dmg`
+Output: `release/macos/Lumina Gallery-0.1.0.dmg`
 
-> Budowanie macOS wymaga komputera Mac lub GitHub Actions (Actions -> Build macOS -> Run workflow)
+> Building for macOS requires a Mac or GitHub Actions (Actions → Build macOS → Run workflow)
 
-## Funkcje
+## Features
 
-- Przegladanie folderow ze zdjeciami i filmami
-- Lightbox z edytorem (kadroanie, jasnosc, kontrast)
-- Ulubione foldery i albumy
-- Kosz z mozliwoscia przywracania plikow
-- Wyszukiwanie i sortowanie
-- Widok siatki i listy
-- Jezyki: Polski, English, Deutsch
+- Browse folders with photos and videos
+- Lightbox with editor (crop, brightness, contrast, saturation)
+- Favorite folders and albums
+- Trash bin with file restore
+- Search and sorting
+- Grid and list view
+- Languages: Polish, English, Deutsch
