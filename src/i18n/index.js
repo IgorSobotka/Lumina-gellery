@@ -142,6 +142,20 @@ const pl = {
   infoSize:          'Rozmiar',
   infoDate:          'Data',
   infoPath:          'Ścieżka',
+
+  // EXIF
+  exifSection:       'Dane EXIF',
+  exifCamera:        'Aparat',
+  exifLens:          'Obiektyw',
+  exifFocalLength:   'Ogniskowa',
+  exifExposure:      'Czas naśw.',
+  exifAperture:      'Przysłona',
+  exifISO:           'ISO',
+  exifDateTaken:     'Data zdjęcia',
+  exifGPS:           'Lokalizacja',
+  exifFlash:         'Lampa',
+  exifNoData:        'Brak danych EXIF',
+
   cropBadge:         '✂ Kadrowanie — przeciągnij uchwyty, kliknij Zastosuj',
   savedSuccess:      '✓ Zapisano!',
   saveError:         '✕ Błąd zapisu',
@@ -322,6 +336,20 @@ const en = {
   infoSize:          'Size',
   infoDate:          'Date',
   infoPath:          'Path',
+
+  // EXIF
+  exifSection:       'EXIF Data',
+  exifCamera:        'Camera',
+  exifLens:          'Lens',
+  exifFocalLength:   'Focal length',
+  exifExposure:      'Exposure',
+  exifAperture:      'Aperture',
+  exifISO:           'ISO',
+  exifDateTaken:     'Date taken',
+  exifGPS:           'Location',
+  exifFlash:         'Flash',
+  exifNoData:        'No EXIF data',
+
   cropBadge:         '✂ Crop — drag handles, click Apply',
   savedSuccess:      '✓ Saved!',
   saveError:         '✕ Save error',
@@ -502,6 +530,20 @@ const de = {
   infoSize:          'Größe',
   infoDate:          'Datum',
   infoPath:          'Pfad',
+
+  // EXIF
+  exifSection:       'EXIF-Daten',
+  exifCamera:        'Kamera',
+  exifLens:          'Objektiv',
+  exifFocalLength:   'Brennweite',
+  exifExposure:      'Belichtung',
+  exifAperture:      'Blende',
+  exifISO:           'ISO',
+  exifDateTaken:     'Aufnahmedatum',
+  exifGPS:           'Standort',
+  exifFlash:         'Blitz',
+  exifNoData:        'Keine EXIF-Daten',
+
   cropBadge:         '✂ Zuschneiden — Griffe ziehen, Anwenden klicken',
   savedSuccess:      '✓ Gespeichert!',
   saveError:         '✕ Speicherfehler',

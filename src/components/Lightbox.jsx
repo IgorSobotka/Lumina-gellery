@@ -368,6 +368,78 @@ function VideoPlayer({ src }) {
 }
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
+// ── EXIF helpers ──────────────────────────────────────────────────────────────
+function fmtExposure(v) {
+  if (!v) return null
+  if (v >= 1) return `${v}s`
+  return `1/${Math.round(1 / v)}s`
+}
+function fmtGPS(lat, lon, latRef, lonRef) {
+  if (!lat || !lon) return null
+  const la = Array.isArray(lat) ? lat[0] + lat[1]/60 + lat[2]/3600 : lat
+  const lo = Array.isArray(lon) ? lon[0] + lon[1]/60 + lon[2]/3600 : lon
+  const laD = latRef === 'S' ? -la : la
+  const loD = lonRef === 'W' ? -lo : lo
+  return { lat: laD.toFixed(5), lon: loD.toFixed(5) }
+}
+
+function ExifSection({ exif, t }) {
+  if (exif === null) return (
+    <div style={{ padding:'10px 0 4px', fontSize:11, color:'var(--text-3)', fontStyle:'italic' }}>
+      Ładowanie EXIF…
+    </div>
+  )
+  const camera   = [exif.Make, exif.Model].filter(Boolean).join(' ') || null
+  const lens     = exif.LensModel || exif.LensMake || null
+  const focal    = exif.FocalLength ? `${exif.FocalLength} mm` : null
+  const exposure = fmtExposure(exif.ExposureTime)
+  const aperture = exif.FNumber ? `f/${exif.FNumber}` : null
+  const iso      = exif.ISO ? `${exif.ISO}` : null
+  const dateTaken = exif.DateTimeOriginal || exif.CreateDate
+    ? new Date(exif.DateTimeOriginal || exif.CreateDate).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+    : null
+  const gps      = fmtGPS(exif.GPSLatitude, exif.GPSLongitude, exif.GPSLatitudeRef, exif.GPSLongitudeRef)
+
+  const rows = [
+    camera   && [t('exifCamera'),      camera],
+    lens     && [t('exifLens'),        lens],
+    focal    && [t('exifFocalLength'), focal],
+    exposure && [t('exifExposure'),    exposure],
+    aperture && [t('exifAperture'),    aperture],
+    iso      && [t('exifISO'),         iso],
+    dateTaken && [t('exifDateTaken'),  dateTaken],
+  ].filter(Boolean)
+
+  if (rows.length === 0 && !gps) return (
+    <div style={{ padding:'10px 0 4px', fontSize:11, color:'var(--text-3)', fontStyle:'italic' }}>
+      {t('exifNoData')}
+    </div>
+  )
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className={styles.tagSectionTitle} style={{ marginBottom: 4 }}>{t('exifSection')}</div>
+      {rows.map(([label, val]) => (
+        <div key={label} className={styles.infoRow}>
+          <span>{label}</span><span>{val}</span>
+        </div>
+      ))}
+      {gps && (
+        <div className={styles.infoRow}>
+          <span>{t('exifGPS')}</span>
+          <a
+            href={`https://maps.google.com/?q=${gps.lat},${gps.lon}`}
+            target="_blank" rel="noreferrer"
+            style={{ color:'var(--accent)', fontSize:11 }}
+          >
+            {gps.lat}°, {gps.lon}°
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Lightbox({ images, index, onClose, onPrev, onNext, onChange, tags, onTagsChange, edits, onEditChange }) {
   const t    = useLang()
   const lang = useLangCode()
@@ -380,6 +452,7 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
   const [cropMode,   setCropMode]   = useState(false)
   const [editState,  setEditState]  = useState(() => edits?.[images[index]?.path] ?? DEFAULT_EDIT)
   const [tagInput,   setTagInput]   = useState('')
+  const [exif,       setExif]       = useState(null)
   const dragStart    = useRef(null)
   const imgRef       = useRef(null)
   const containerRef = useRef(null)
@@ -403,7 +476,17 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
     setScale(1); setPan({ x: 0, y: 0 }); setTagInput('')
     setEditState(edits?.[images[index]?.path] ?? DEFAULT_EDIT)
     setCropMode(false)
+    setExif(null)
   }, [index]) // eslint-disable-line
+
+  // Ładuj EXIF gdy otwarto info panel
+  useEffect(() => {
+    if (!showInfo || !img || img.isVideo) return
+    if (exif !== null) return // już załadowane
+    window.api?.getExif(img.path).then(res => {
+      setExif(res?.success ? res.data : {})
+    }).catch(() => setExif({}))
+  }, [showInfo, img]) // eslint-disable-line
 
   // Panels are independent — left (editor) and right (info/export) can coexist
   // Info and Export share the right slot, so they stay mutually exclusive with each other
@@ -581,6 +664,11 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
             <div className={styles.infoRow}><span>{t('infoSize')}</span><span>{formatSize(img.size)}</span></div>
             <div className={styles.infoRow}><span>{t('infoDate')}</span><span>{formatDate(img.mtime, t('locale'))}</span></div>
             <div className={styles.infoRowPath}><span>{t('infoPath')}</span><span title={img.path}>{img.path}</span></div>
+
+            {/* ── EXIF ── */}
+            {!img.isVideo && (
+              <ExifSection exif={exif} t={t} lang={lang} />
+            )}
 
             <div className={styles.tagSection}>
               <div className={styles.tagSectionTitle}>{t('tagsSec')}</div>

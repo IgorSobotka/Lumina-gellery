@@ -1,4 +1,5 @@
-import { useRef, useCallback, useState, useEffect, memo } from 'react'
+import { useRef, useCallback, useState, useEffect, useLayoutEffect, memo, useMemo } from 'react'
+import { VariableSizeList } from 'react-window'
 import ContextMenu from './ContextMenu'
 import { useLang, useLangCode, photoCount, selectedCount, exportSelectedTitle, confirmDeleteSelected } from '../i18n/index'
 import { tagColor } from '../utils/tags'
@@ -6,6 +7,10 @@ import { exportFromUrl, DEFAULT_EDIT } from './Editor/editorUtils'
 import styles from './Gallery.module.css'
 
 const GRID_SIZES = { small: 140, medium: 200, large: 280 }
+const VGRID_GAP     = 12
+const VGRID_PADDING = 16
+const VGRID_HEADER_H  = 38
+const VGRID_DIVIDER_H = 24
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`
@@ -550,12 +555,53 @@ const ListRow = memo(function ListRow({ img, index, onSelect, onRightClick, isSe
 })
 
 // ── Main Gallery ──
+// ── Virtual grid helpers ──────────────────────────────────────────────────────
+function useGridLayout(containerRef, size) {
+  const [layout, setLayout] = useState({ cols: 4, height: 0, width: 0 })
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = (w, h) => setLayout({
+      cols: Math.max(1, Math.floor((w - VGRID_PADDING * 2 + VGRID_GAP) / (size + VGRID_GAP))),
+      height: h,
+      width: w,
+    })
+    update(el.offsetWidth, el.offsetHeight)
+    const ro = new ResizeObserver(([e]) => update(e.target.offsetWidth, e.target.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [containerRef, size])
+  return layout
+}
+
+function buildVirtualRows(hasFolders, subfolders, hasImages, images, cols, size, t) {
+  const rowH = size + VGRID_GAP + 4
+  const rows = []
+  if (hasFolders) {
+    rows.push({ type: 'header', label: `${t('subfoldersSec')} (${subfolders.length})`, h: VGRID_HEADER_H })
+    for (let i = 0; i < subfolders.length; i += cols)
+      rows.push({ type: 'folders', items: subfolders.slice(i, i + cols), h: rowH })
+    if (hasImages) rows.push({ type: 'divider', h: VGRID_DIVIDER_H })
+  }
+  if (hasImages) {
+    if (hasFolders) rows.push({ type: 'header', label: `${t('photosSec')} (${images.length})`, h: VGRID_HEADER_H })
+    for (let i = 0; i < images.length; i += cols)
+      rows.push({ type: 'images', items: images.slice(i, i + cols), startIndex: i, h: rowH })
+  }
+  return rows
+}
+
 export default function Gallery({ images, subfolders, showSubfolders, loading, gridSize, onSelect, onOpenFolder, tags, onAddToAlbum, selected, onToggleSelect, onClearSelect, onAfterDelete, edits, albumView, onRemoveFromAlbum, viewMode = 'grid', onSelectAll, onTrashFiles = null }) {
   const t    = useLang()
   const lang = useLangCode()
   const size = GRID_SIZES[gridSize]
   const [ctxMenu,         setCtxMenu]         = useState(null)
   const [showBulkExport,  setShowBulkExport]  = useState(false)
+
+  // Virtual grid
+  const gridContainerRef = useRef(null)
+  const listRef          = useRef(null)
+  const { cols, height: gridHeight, width: gridWidth } = useGridLayout(gridContainerRef, size)
 
   const handleRightClick = useCallback((e, img, index) => {
     setCtxMenu({ x: e.clientX, y: e.clientY, image: img, index })
@@ -594,6 +640,48 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
     return () => window.removeEventListener('keydown', onKey)
   }, [selected, onClearSelect, onSelectAll, handleDeleteSelected])
 
+  const hasFolders = showSubfolders && subfolders.length > 0
+  const hasImages  = images.length > 0
+
+  // ── Virtual rows — hooki MUSZĄ być przed early returns ──
+  const virtualRows = useMemo(
+    () => buildVirtualRows(hasFolders, subfolders, hasImages, images, cols, size, t),
+    [hasFolders, subfolders, hasImages, images, cols, size, t]
+  )
+  useEffect(() => { listRef.current?.resetAfterIndex(0) }, [virtualRows])
+
+  const VRow = useCallback(({ index, style }) => {
+    const row = virtualRows[index]
+    if (row.type === 'header') return (
+      <div style={{ ...style, padding: `0 ${VGRID_PADDING}px`, display:'flex', alignItems:'flex-end' }}>
+        <div className={styles.sectionLabel}>{row.label}</div>
+      </div>
+    )
+    if (row.type === 'divider') return (
+      <div style={style}><div className={styles.sectionDivider} /></div>
+    )
+    return (
+      <div style={{ ...style, display:'flex', gap: VGRID_GAP, padding: `0 ${VGRID_PADDING}px`, alignItems:'flex-start', boxSizing:'border-box' }}>
+        {row.type === 'folders' && row.items.map(sf => (
+          <FolderCard key={sf.path} folder={sf} size={size}
+            onOpen={() => onOpenFolder(sf.path)}
+            onRightClick={handleFolderRightClick} />
+        ))}
+        {row.type === 'images' && row.items.map((img, j) => (
+          <ImageCard key={img.path} img={img} index={row.startIndex + j} size={size}
+            onSelect={onSelect}
+            onRightClick={handleRightClick}
+            imgTags={tags?.[img.path] ?? []}
+            isSelected={selected?.has(img.path) ?? false}
+            onToggleSelect={onToggleSelect ?? (() => {})} />
+        ))}
+      </div>
+    )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [virtualRows, size, selected, tags])
+
+  const selectedSize = images.filter(img => selected?.has(img.path)).reduce((s, img) => s + img.size, 0)
+
   if (loading) return (
     <div className={styles.center}>
       <div className={styles.spinner} />
@@ -601,17 +689,12 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
     </div>
   )
 
-  const hasFolders = showSubfolders && subfolders.length > 0
-  const hasImages  = images.length > 0
-
   if (!hasFolders && !hasImages) return (
     <div className={styles.center}>
       <div className={styles.emptyIcon}>🖼️</div>
       <span className={styles.hint}>{t('noPhotos')}</span>
     </div>
   )
-
-  const selectedSize = images.filter(img => selected?.has(img.path)).reduce((s, img) => s + img.size, 0)
 
   return (
     <>
@@ -644,52 +727,26 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
         </div>
       ) : (
         <div
-          className={styles.grid}
-          style={{ '--cell': `${size}px` }}
+          ref={gridContainerRef}
+          className={styles.virtualGridOuter}
           onContextMenu={e => {
-            // Empty space (not on any card) → generic menu
             if (!e.target.closest(`.${styles.card}`) && !e.target.closest(`.${styles.folderCard}`)) {
               e.preventDefault()
               setCtxMenu({ x: e.clientX, y: e.clientY })
             }
           }}
         >
-
-          {hasFolders && (
-            <>
-              <div className={styles.sectionLabel} style={{ gridColumn: '1 / -1' }}>
-                {t('subfoldersSec')} ({subfolders.length})
-              </div>
-              {subfolders.map(sf => (
-                <FolderCard key={sf.path} folder={sf} size={size} onOpen={() => onOpenFolder(sf.path)} onRightClick={handleFolderRightClick} />
-              ))}
-              {hasImages && (
-                <div className={styles.sectionDivider} style={{ gridColumn: '1 / -1' }} />
-              )}
-            </>
-          )}
-
-          {hasImages && (
-            <>
-              {hasFolders && (
-                <div className={styles.sectionLabel} style={{ gridColumn: '1 / -1' }}>
-                  {t('photosSec')} ({images.length})
-                </div>
-              )}
-              {images.map((img, i) => (
-                <ImageCard
-                  key={img.path}
-                  img={img}
-                  index={i}
-                  size={size}
-                  onSelect={onSelect}
-                  onRightClick={handleRightClick}
-                  imgTags={tags?.[img.path] ?? []}
-                  isSelected={selected?.has(img.path) ?? false}
-                  onToggleSelect={onToggleSelect ?? (() => {})}
-                />
-              ))}
-            </>
+          {gridWidth > 0 && gridHeight > 0 && (
+            <VariableSizeList
+              ref={listRef}
+              height={gridHeight}
+              width={gridWidth}
+              itemCount={virtualRows.length}
+              itemSize={i => virtualRows[i].h}
+              overscanCount={4}
+            >
+              {VRow}
+            </VariableSizeList>
           )}
         </div>
       )}

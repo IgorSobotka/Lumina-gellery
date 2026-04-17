@@ -372,6 +372,25 @@ ipcMain.handle('get-folder-preview', async (_event, folderPath) => {
 ipcMain.handle('open-file', (_event, filePath) => shell.openPath(filePath))
 ipcMain.handle('show-in-explorer', (_event, filePath) => shell.showItemInFolder(filePath))
 
+ipcMain.handle('get-exif', async (_event, filePath) => {
+  try {
+    const exifr = require('exifr')
+    const data = await exifr.parse(filePath, {
+      pick: [
+        'Make','Model','LensModel','LensMake',
+        'ExposureTime','FNumber','ISO','FocalLength','FocalLengthIn35mmFormat',
+        'DateTimeOriginal','CreateDate',
+        'GPSLatitude','GPSLongitude','GPSLatitudeRef','GPSLongitudeRef',
+        'ImageWidth','ImageHeight','ExifImageWidth','ExifImageHeight',
+        'Orientation','Flash','WhiteBalance','ExposureProgram','MeteringMode',
+      ]
+    })
+    return { success: true, data: data || {} }
+  } catch (e) {
+    return { success: false, data: {} }
+  }
+})
+
 ipcMain.handle('pick-wallpaper', async () => {
   const result = await dialog.showOpenDialog({
     title: 'Wybierz tapetę',

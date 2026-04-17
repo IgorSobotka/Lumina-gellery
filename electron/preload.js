@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   trashFiles:            (ps)    => ipcRenderer.invoke('trash-files', ps),
   restoreFiles:          (items) => ipcRenderer.invoke('restore-files', items),
   emptyTrash:            (ps)    => ipcRenderer.invoke('empty-trash', ps),
+  getExif:               (p)  => ipcRenderer.invoke('get-exif', p),
   getThumbnail:          (o)  => ipcRenderer.invoke('get-thumbnail', o),
   getCacheInfo:          ()   => ipcRenderer.invoke('get-cache-info'),
   clearCache:            ()   => ipcRenderer.invoke('clear-cache'),
