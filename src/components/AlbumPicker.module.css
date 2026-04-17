@@ -61,9 +61,9 @@
   transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 .albumRow:not(.already):hover {
-  background: rgba(191,90,242,0.14);
-  border-color: rgba(191,90,242,0.28);
-  color: #ddb0ff;
+  background: rgba(var(--accent-rgb),0.14);
+  border-color: rgba(var(--accent-rgb),0.28);
+  color: var(--accent-text);
 }
 .albumRow svg { flex-shrink: 0; opacity: 0.65; }
 .albumName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -99,7 +99,7 @@
 }
 .input::placeholder { color: var(--text-3); }
 .input:focus {
-  border-color: rgba(191,90,242,0.50);
+  border-color: rgba(var(--accent-rgb),0.50);
   background: rgba(255,255,255,0.10);
   box-shadow: 0 0 0 2px rgba(255,255,255,0.14);
 }
@@ -107,13 +107,13 @@
 .createBtn {
   padding: 7px 14px; border-radius: var(--radius-pill);
   font-size: 11px; font-weight: 700; white-space: nowrap;
-  background: rgba(191,90,242,0.28);
-  border: 1px solid rgba(191,90,242,0.45);
-  color: #ddb0ff;
+  background: rgba(var(--accent-rgb),0.28);
+  border: 1px solid rgba(var(--accent-rgb),0.45);
+  color: var(--accent-text);
   transition: all var(--transition);
 }
 .createBtn:hover:not(:disabled) {
-  background: rgba(191,90,242,0.42);
+  background: rgba(var(--accent-rgb),0.42);
   box-shadow: 0 0 14px rgba(255,255,255,0.25);
 }
 .createBtn:disabled { opacity: 0.35; cursor: default; }

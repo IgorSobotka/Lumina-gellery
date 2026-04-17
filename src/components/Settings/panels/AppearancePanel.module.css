@@ -51,8 +51,8 @@
 }
 
 .wallpaperCard.selected {
-  border-color: rgba(191,90,242,0.70);
-  background: rgba(191,90,242,0.10);
+  border-color: rgba(var(--accent-rgb),0.70);
+  background: rgba(var(--accent-rgb),0.10);
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.30),
     0 8px 24px rgba(0,0,0,0.30),
@@ -85,7 +85,7 @@
   top: 6px; right: 6px;
   width: 20px; height: 20px;
   border-radius: 50%;
-  background: rgba(191,90,242,0.85);
+  background: rgba(var(--accent-rgb),0.85);
   border: 1.5px solid rgba(255,255,255,0.40);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(255,255,255,0.50);
@@ -111,6 +111,50 @@
   display: flex; align-items: center; justify-content: center;
   border: 1.5px dashed rgba(255,255,255,0.20);
   border-radius: var(--radius-sm);
+}
+
+/* ── Accent color ── */
+.accentRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.accentDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--dot-color);
+  border: none;
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  cursor: pointer;
+  transition: transform var(--spring), outline-color var(--transition), box-shadow var(--transition);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.accentDot:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+.accentDotActive {
+  outline-color: rgba(255,255,255,0.85);
+  transform: scale(1.15);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.40);
+}
+.accentDotCustom {
+  border: 1.5px dashed rgba(255,255,255,0.35);
+  background: var(--dot-color);
+}
+.colorInput {
+  position: absolute;
+  width: 0; height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ── Blur slider ── */
@@ -150,7 +194,7 @@
   -webkit-appearance: none;
   width: 16px; height: 16px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(191,90,242,0.95), rgba(94,92,230,0.90));
+  background: linear-gradient(135deg, rgba(var(--accent-rgb),0.95), rgba(94,92,230,0.90));
   border: 1.5px solid rgba(255,255,255,0.35);
   box-shadow: 0 2px 8px rgba(255,255,255,0.50), inset 0 1px 0 rgba(255,255,255,0.30);
   cursor: pointer;
@@ -166,7 +210,7 @@
 .slider::-moz-range-thumb {
   width: 16px; height: 16px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(191,90,242,0.95), rgba(94,92,230,0.90));
+  background: linear-gradient(135deg, rgba(var(--accent-rgb),0.95), rgba(94,92,230,0.90));
   border: 1.5px solid rgba(255,255,255,0.35);
   box-shadow: 0 2px 8px rgba(255,255,255,0.50);
   cursor: pointer;

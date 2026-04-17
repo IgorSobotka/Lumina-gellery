@@ -251,7 +251,7 @@
   color: var(--text-3); display: flex; align-items: center; justify-content: center;
   transition: background var(--transition), color var(--transition);
 }
-.sectionAddBtn:hover { background: rgba(191,90,242,0.22); color: #ddb0ff; }
+.sectionAddBtn:hover { background: rgba(var(--accent-rgb),0.22); color: var(--accent-text); }
 
 .newAlbumRow {
   display: flex; gap: 4px; padding: 4px 4px 6px;
@@ -263,7 +263,7 @@
   font-size: 11px; color: var(--text-1); font-family: inherit; outline: none;
   transition: border-color var(--transition);
 }
-.newAlbumInput:focus { border-color: rgba(191,90,242,0.45); }
+.newAlbumInput:focus { border-color: rgba(var(--accent-rgb),0.45); }
 .newAlbumInput::placeholder { color: var(--text-3); }
 
 .newAlbumConfirm {
@@ -282,9 +282,9 @@
 }
 
 .itemActive {
-  background: rgba(191,90,242,0.18) !important;
-  border-color: rgba(191,90,242,0.30) !important;
-  color: #ddb0ff !important;
+  background: rgba(var(--accent-rgb),0.18) !important;
+  border-color: rgba(var(--accent-rgb),0.30) !important;
+  color: var(--accent-text) !important;
 }
 
 .albumCountBadge {
@@ -331,8 +331,8 @@
 }
 
 .settingsBtn:active {
-  background: rgba(191,90,242,0.14);
-  border-color: rgba(191,90,242,0.28);
+  background: rgba(var(--accent-rgb),0.14);
+  border-color: rgba(var(--accent-rgb),0.28);
   color: rgba(220,170,255,0.9);
 }
 

@@ -248,7 +248,7 @@ function CropOverlay({ imgRef, onApply, onCancel, initialCrop }) {
         )}
       </>}
       <div style={{ position:'absolute', bottom:18, left:'50%', transform:'translateX(-50%)', display:'flex', gap:8, zIndex:22 }}>
-        <button onClick={handleApply} style={{ ...btnS, background:'rgba(191,90,242,0.82)', borderColor:'rgba(191,90,242,0.95)', color:'white' }}>{t('applyCrop')}</button>
+        <button onClick={handleApply} style={{ ...btnS, background:'rgba(var(--accent-rgb),0.82)', borderColor:'rgba(var(--accent-rgb),0.95)', color:'white' }}>{t('applyCrop')}</button>
         <button onClick={onCancel}    style={{ ...btnS, background:'rgba(255,255,255,0.13)', borderColor:'rgba(255,255,255,0.28)', color:'white' }}>{t('cancelCrop')}</button>
       </div>
     </div>

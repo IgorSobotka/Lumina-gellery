@@ -15,8 +15,10 @@ import {
 } from './utils/albums'
 import AlbumPicker from './components/AlbumPicker'
 import TrashView from './components/TrashView'
+import PrivateSpace from './components/PrivateSpace'
 import { loadTrash, saveTrash } from './utils/trash'
 import { LangContext } from './i18n/index'
+import { applyAccent } from './utils/accent'
 import styles from './App.module.css'
 
 const RECENT_KEY     = 'lumina_recent_folders'
@@ -60,7 +62,7 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [recent, setRecent] = useState(loadRecent)
   const [showSubfolders, setShowSubfolders] = useState(true)
-  const [settings, setSettings] = useState(loadSettings)
+  const [settings, setSettings] = useState(() => { const s = loadSettings(); applyAccent(s.accentColor, s.accentCustom); return s })
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [navHistory, setNavHistory] = useState([]) // back stack
   const [navFuture,  setNavFuture]  = useState([]) // forward stack
@@ -73,12 +75,14 @@ export default function App() {
   const [edits,      setEdits]      = useState(loadEdits)
   const [selected,   setSelected]   = useState(new Set())
   const [trash,      setTrash]      = useState(loadTrash)
-  const [trashView,  setTrashView]  = useState(false)
+  const [trashView,   setTrashView]   = useState(false)
+  const [privateView, setPrivateView] = useState(false)
 
   // Ref so callbacks always read the latest folder without re-creating
   const folderRef = useRef(null)
 
   const handleSettingsChange = useCallback((next) => {
+    applyAccent(next.accentColor, next.accentCustom)
     setSettings(next)
     saveSettings(next)
   }, [])
@@ -112,6 +116,7 @@ export default function App() {
     if (!path) return
     setAlbumView(null)
     setTrashView(false)
+    setPrivateView(false)
     const cur = folderRef.current
     if (cur) setNavHistory(h => [...h, cur])
     setNavFuture([])
@@ -377,10 +382,13 @@ export default function App() {
           onDeleteAlbum={handleDeleteAlbum}
           onCreateAlbum={handleCreateAlbum}
           trashCount={trash.length}
-          onOpenTrash={() => { setTrashView(true); setAlbumView(null); setFolder(null) }}
+          onOpenTrash={() => { setTrashView(true); setPrivateView(false); setAlbumView(null); setFolder(null) }}
+          onOpenPrivate={() => { setPrivateView(true); setTrashView(false); setAlbumView(null) }}
         />
         <div className={styles.main}>
-          {trashView ? (
+          {privateView ? (
+            <PrivateSpace />
+          ) : trashView ? (
             <TrashView
               items={trash}
               onRestore={handleRestoreFiles}

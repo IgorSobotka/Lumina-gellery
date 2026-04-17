@@ -55,7 +55,7 @@ async function generateThumb(filePath, mtime) {
 
 const _thumbQueue = []
 let _activeCount = 0
-const MAX_CONCURRENT = 4
+const MAX_CONCURRENT = 8
 
 function pumpThumbQueue() {
   while (_activeCount < MAX_CONCURRENT && _thumbQueue.length > 0) {
@@ -65,6 +65,29 @@ function pumpThumbQueue() {
       .then(resolve)
       .catch(() => resolve(null))
       .finally(() => { _activeCount--; pumpThumbQueue() })
+  }
+}
+
+// ── Folder preview in-memory cache (LRU) ──
+const FOLDER_CACHE_MAX = 1000
+const _folderCache = new Map()
+
+function getFolderCache(folderPath) {
+  const entry = _folderCache.get(folderPath)
+  if (!entry) return null
+  let mtime
+  try { mtime = fs.statSync(folderPath).mtimeMs }
+  catch { _folderCache.delete(folderPath); return null }
+  if (mtime !== entry.mtime) { _folderCache.delete(folderPath); return null }
+  _folderCache.delete(folderPath); _folderCache.set(folderPath, entry)
+  return entry
+}
+
+function setFolderCache(folderPath, entry) {
+  if (_folderCache.has(folderPath)) _folderCache.delete(folderPath)
+  _folderCache.set(folderPath, entry)
+  if (_folderCache.size > FOLDER_CACHE_MAX) {
+    _folderCache.delete(_folderCache.keys().next().value)
   }
 }
 
@@ -352,21 +375,38 @@ ipcMain.handle('get-folder-image-count', (_event, folderPath) => {
 })
 
 ipcMain.handle('get-folder-preview', async (_event, folderPath) => {
+  const cached = getFolderCache(folderPath)
+  if (cached) return { count: cached.count, thumbs: cached.thumbs }
+
   try {
+    const folderMtime = fs.statSync(folderPath).mtimeMs
     const entries = fs.readdirSync(folderPath, { withFileTypes: true })
-    const urls = []
+    const imagePaths = []
     let count = 0
     for (const entry of entries) {
       if (!entry.isFile()) continue
-      if (!MEDIA_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) continue
+      const ext = path.extname(entry.name).toLowerCase()
+      if (!MEDIA_EXTENSIONS.has(ext)) continue
       count++
-      if (urls.length < 3) {
-        const fp = path.join(folderPath, entry.name)
-        urls.push(`gallery://img?p=${encodeURIComponent(fp)}`)
+      if (imagePaths.length < 3 && IMAGE_EXTENSIONS.has(ext)) {
+        imagePaths.push(path.join(folderPath, entry.name))
       }
     }
-    return { count, urls }
-  } catch { return { count: 0, urls: [] } }
+    const thumbs = (await Promise.all(
+      imagePaths.map(fp => {
+        try {
+          const mtime = fs.statSync(fp).mtimeMs
+          return new Promise(resolve => {
+            _thumbQueue.push({ filePath: fp, mtime, resolve })
+            pumpThumbQueue()
+          })
+        } catch { return Promise.resolve(null) }
+      })
+    )).filter(Boolean)
+
+    setFolderCache(folderPath, { mtime: folderMtime, count, thumbs })
+    return { count, thumbs }
+  } catch { return { count: 0, thumbs: [] } }
 })
 
 ipcMain.handle('open-file', (_event, filePath) => shell.openPath(filePath))
@@ -389,6 +429,299 @@ ipcMain.handle('get-exif', async (_event, filePath) => {
   } catch (e) {
     return { success: false, data: {} }
   }
+})
+
+// ── Private Space ────────────────────────────────────────────────────────────
+// Container format:
+//   [0-7]   magic "LUMINA1\0"
+//   [8-39]  salt (32 bytes, for PBKDF2)
+//   [40-43] manifest_block_len (uint32 LE)
+//   [44 .. 44+mbl-1]  encrypted manifest: IV(12)+TAG(16)+JSON
+//   [44+mbl ..]  file blocks: IV(12)+TAG(16)+ciphertext, in manifest order
+
+const PV_MAGIC = Buffer.from('LUMINA1\0')
+let _pvKey      = null   // Buffer | null — in RAM only
+let _pvManifest = null   // array | null
+
+function pvPath() {
+  return path.join(app.getPath('userData'), 'private.lumina')
+}
+
+function pvDerive(pin, salt) {
+  return crypto.pbkdf2Sync(Buffer.from(String(pin), 'utf8'), salt, 100000, 32, 'sha256')
+}
+
+function pvEncBlock(key, plain) {
+  const iv  = crypto.randomBytes(12)
+  const c   = crypto.createCipheriv('aes-256-gcm', key, iv)
+  const enc = Buffer.concat([c.update(plain), c.final()])
+  const tag = c.getAuthTag()
+  return Buffer.concat([iv, tag, enc])
+}
+
+function pvDecBlock(key, buf) {
+  const iv  = buf.slice(0, 12)
+  const tag = buf.slice(12, 28)
+  const ct  = buf.slice(28)
+  const d   = crypto.createDecipheriv('aes-256-gcm', key, iv)
+  d.setAuthTag(tag)
+  return Buffer.concat([d.update(ct), d.final()])
+}
+
+// Manifest v2: { v:2, folders:string[], files:[{name,size,mtime,ext,isVideo,folder}] }
+// Migrates v1 (plain array) automatically on next write
+function pvParseContainer(key) {
+  const fp  = pvPath()
+  const raw = fs.readFileSync(fp)
+  if (!raw.slice(0, 8).equals(PV_MAGIC)) throw new Error('bad_magic')
+  const mbl  = raw.readUInt32LE(40)
+  const mEnc = raw.slice(44, 44 + mbl)
+  const mDec = pvDecBlock(key, mEnc)
+  const parsed = JSON.parse(mDec.toString('utf8'))
+  // Migrate v1 (array) → v2 (object)
+  const manifest = Array.isArray(parsed)
+    ? { v: 2, folders: [], files: parsed.map(f => ({ ...f, folder: null })) }
+    : parsed
+  return { raw, manifest, files: manifest.files, dataStart: 44 + mbl }
+}
+
+function pvRebuild(key, manifest, fileBuffers) {
+  const fp  = pvPath()
+  const salt = fs.existsSync(fp) ? fs.readFileSync(fp).slice(8, 40) : crypto.randomBytes(32)
+  const mEnc   = pvEncBlock(key, Buffer.from(JSON.stringify(manifest), 'utf8'))
+  const mblBuf = Buffer.allocUnsafe(4)
+  mblBuf.writeUInt32LE(mEnc.length, 0)
+  const parts = [PV_MAGIC, salt, mblBuf, mEnc]
+  for (const fb of fileBuffers) parts.push(pvEncBlock(key, fb))
+  fs.writeFileSync(fp, Buffer.concat(parts))
+}
+
+function pvReadFileBuffer(raw, files, dataStart, idx) {
+  let offset = dataStart
+  for (let i = 0; i < idx; i++) offset += 12 + 16 + files[i].size
+  return raw.slice(offset, offset + 12 + 16 + files[idx].size)
+}
+
+// IPC handlers
+ipcMain.handle('private-exists',     () => fs.existsSync(pvPath()))
+ipcMain.handle('private-is-unlocked', () => _pvKey !== null)
+
+function pvFilesMeta(files) {
+  return files.map(f => ({ name: f.name, size: f.size, mtime: f.mtime, ext: f.ext, isVideo: f.isVideo, folder: f.folder ?? null }))
+}
+
+ipcMain.handle('private-create', (_e, pin) => {
+  if (!pin || String(pin).length < 4) return { success: false, error: 'pin_too_short' }
+  const salt = crypto.randomBytes(32)
+  const key  = pvDerive(pin, salt)
+  const manifest = { v: 2, folders: [], files: [] }
+  const mEnc   = pvEncBlock(key, Buffer.from(JSON.stringify(manifest), 'utf8'))
+  const mblBuf = Buffer.allocUnsafe(4)
+  mblBuf.writeUInt32LE(mEnc.length, 0)
+  fs.writeFileSync(pvPath(), Buffer.concat([PV_MAGIC, salt, mblBuf, mEnc]))
+  _pvKey = key; _pvManifest = manifest
+  return { success: true }
+})
+
+ipcMain.handle('private-unlock', (_e, pin) => {
+  try {
+    if (!fs.existsSync(pvPath())) return { success: false, error: 'no_container' }
+    const raw  = fs.readFileSync(pvPath())
+    if (!raw.slice(0, 8).equals(PV_MAGIC)) return { success: false, error: 'bad_file' }
+    const salt = raw.slice(8, 40)
+    const key  = pvDerive(pin, salt)
+    const { manifest } = pvParseContainer(key)
+    _pvKey = key; _pvManifest = manifest
+    return { success: true, files: pvFilesMeta(manifest.files), folders: manifest.folders }
+  } catch { return { success: false, error: 'wrong_pin' } }
+})
+
+ipcMain.handle('private-lock', () => { _pvKey = null; _pvManifest = null; return { success: true } })
+
+ipcMain.handle('private-list', () => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  return { success: true, files: pvFilesMeta(_pvManifest.files), folders: _pvManifest.folders }
+})
+
+ipcMain.handle('private-thumb', async (_e, name) => {
+  if (!_pvKey) return null
+  try {
+    const { files } = _pvManifest
+    const idx = files.findIndex(f => f.name === name)
+    if (idx < 0) return null
+    const { raw, dataStart } = pvParseContainer(_pvKey)
+    const plain = pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, idx))
+    const thumb = nativeImage.createFromBuffer(plain).resize({ width: 300, height: 300 })
+    return 'data:image/jpeg;base64,' + thumb.toJPEG(85).toString('base64')
+  } catch { return null }
+})
+
+ipcMain.handle('private-read', async (_e, name) => {
+  if (!_pvKey) return null
+  try {
+    const { files } = _pvManifest
+    const idx = files.findIndex(f => f.name === name)
+    if (idx < 0) return null
+    const { raw, dataStart } = pvParseContainer(_pvKey)
+    const plain = pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, idx))
+    const ext  = (files[idx].ext || 'jpg').toLowerCase()
+    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+    return `data:${mime};base64,` + plain.toString('base64')
+  } catch { return null }
+})
+
+ipcMain.handle('private-add', async (_e, filePaths, folder = null) => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  try {
+    const { raw, files, dataStart } = pvParseContainer(_pvKey)
+    const bufs = files.map((_, i) => pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, i)))
+    const newFiles = [...files]
+    const newBufs  = [...bufs]
+    for (const fp of filePaths) {
+      const buf  = fs.readFileSync(fp)
+      const ext  = path.extname(fp).slice(1).toUpperCase()
+      const stat = fs.statSync(fp)
+      let name = path.basename(fp), n = 1
+      while (newFiles.some(f => f.name === name))
+        name = `${path.basename(fp, path.extname(fp))}_${n++}${path.extname(fp)}`
+      newFiles.push({ name, size: buf.length, mtime: stat.mtimeMs, ext, isVideo: VIDEO_EXTENSIONS.has(path.extname(fp).toLowerCase()), folder: folder ?? null })
+      newBufs.push(buf)
+    }
+    const newManifest = { ..._pvManifest, files: newFiles }
+    pvRebuild(_pvKey, newManifest, newBufs)
+    _pvManifest = newManifest
+    return { success: true, files: pvFilesMeta(newFiles), folders: newManifest.folders }
+  } catch (e) { return { success: false, error: e.message } }
+})
+
+ipcMain.handle('private-remove', async (_e, name) => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  try {
+    const { raw, files, dataStart } = pvParseContainer(_pvKey)
+    const idx = files.findIndex(f => f.name === name)
+    if (idx < 0) return { success: false, error: 'not_found' }
+    const bufs = files.map((_, i) => pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, i)))
+    bufs.splice(idx, 1)
+    const newFiles    = files.filter((_, i) => i !== idx)
+    const newManifest = { ..._pvManifest, files: newFiles }
+    pvRebuild(_pvKey, newManifest, bufs)
+    _pvManifest = newManifest
+    return { success: true }
+  } catch (e) { return { success: false, error: e.message } }
+})
+
+// ── Folder management ──
+ipcMain.handle('private-create-folder', (_e, name) => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  const trimmed = String(name).trim()
+  if (!trimmed) return { success: false, error: 'empty_name' }
+  if (_pvManifest.folders.includes(trimmed)) return { success: false, error: 'exists' }
+  const newManifest = { ..._pvManifest, folders: [..._pvManifest.folders, trimmed] }
+  pvRebuild(_pvKey, newManifest, _pvManifest.files.map((f, i) => {
+    const { raw, files, dataStart } = pvParseContainer(_pvKey)
+    return pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, i))
+  }))
+  _pvManifest = newManifest
+  return { success: true, folders: newManifest.folders }
+})
+
+ipcMain.handle('private-rename-folder', async (_e, oldName, newName) => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  const trimmed = String(newName).trim()
+  if (!trimmed || _pvManifest.folders.includes(trimmed)) return { success: false, error: 'invalid' }
+  const { raw, files, dataStart } = pvParseContainer(_pvKey)
+  const bufs = files.map((_, i) => pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, i)))
+  const newFiles    = files.map(f => f.folder === oldName ? { ...f, folder: trimmed } : f)
+  const newFolders  = _pvManifest.folders.map(f => f === oldName ? trimmed : f)
+  const newManifest = { ..._pvManifest, folders: newFolders, files: newFiles }
+  pvRebuild(_pvKey, newManifest, bufs)
+  _pvManifest = newManifest
+  return { success: true, folders: newFolders }
+})
+
+ipcMain.handle('private-delete-folder', async (_e, name) => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  const { raw, files, dataStart } = pvParseContainer(_pvKey)
+  const bufs = files.map((_, i) => pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, i)))
+  // Move files from deleted folder to root
+  const newFiles    = files.map(f => f.folder === name ? { ...f, folder: null } : f)
+  const newFolders  = _pvManifest.folders.filter(f => f !== name)
+  const newManifest = { ..._pvManifest, folders: newFolders, files: newFiles }
+  pvRebuild(_pvKey, newManifest, bufs)
+  _pvManifest = newManifest
+  return { success: true, folders: newFolders }
+})
+
+ipcMain.handle('private-move-to-folder', async (_e, name, folder) => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  const newFiles    = _pvManifest.files.map(f => f.name === name ? { ...f, folder: folder ?? null } : f)
+  const newManifest = { ..._pvManifest, files: newFiles }
+  // No file data changes — just rewrite manifest
+  const { raw, files, dataStart } = pvParseContainer(_pvKey)
+  const bufs = files.map((_, i) => pvDecBlock(_pvKey, pvReadFileBuffer(raw, files, dataStart, i)))
+  pvRebuild(_pvKey, newManifest, bufs)
+  _pvManifest = newManifest
+  return { success: true }
+})
+
+ipcMain.handle('private-export', async () => {
+  const result = await dialog.showSaveDialog({
+    title: 'Eksportuj Private Space',
+    defaultPath: 'private.lumina',
+    filters: [{ name: 'Lumina Container', extensions: ['lumina'] }]
+  })
+  if (result.canceled) return { success: false }
+  try { fs.copyFileSync(pvPath(), result.filePath); return { success: true, path: result.filePath } }
+  catch (e) { return { success: false, error: e.message } }
+})
+
+ipcMain.handle('private-import', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Importuj Private Space',
+    filters: [{ name: 'Lumina Container', extensions: ['lumina'] }],
+    properties: ['openFile']
+  })
+  if (result.canceled) return { success: false }
+  try {
+    const src = result.filePaths[0]
+    const raw = fs.readFileSync(src)
+    if (!raw.slice(0, 8).equals(PV_MAGIC)) return { success: false, error: 'bad_file' }
+    _pvKey = null; _pvManifest = null
+    fs.copyFileSync(src, pvPath())
+    return { success: true }
+  } catch (e) { return { success: false, error: e.message } }
+})
+
+ipcMain.handle('private-change-pin', async (_e, oldPin, newPin) => {
+  if (!_pvKey) return { success: false, error: 'locked' }
+  if (!newPin || String(newPin).length < 4) return { success: false, error: 'pin_too_short' }
+  try {
+    const { raw, manifest, dataStart } = pvParseContainer(_pvKey)
+    const buffers = manifest.map((_, i) => pvDecBlock(_pvKey, pvReadFileBuffer(raw, manifest, dataStart, i)))
+    // New key with new salt
+    const newSalt = crypto.randomBytes(32)
+    const newKey  = pvDerive(newPin, newSalt)
+    // Temporarily override pvPath write logic: write new salt
+    const mEnc   = pvEncBlock(newKey, Buffer.from(JSON.stringify(manifest), 'utf8'))
+    const mblBuf = Buffer.allocUnsafe(4)
+    mblBuf.writeUInt32LE(mEnc.length, 0)
+    const parts  = [PV_MAGIC, newSalt, mblBuf, mEnc]
+    for (const fb of buffers) parts.push(pvEncBlock(newKey, fb))
+    fs.writeFileSync(pvPath(), Buffer.concat(parts))
+    _pvKey = newKey
+    return { success: true }
+  } catch (e) { return { success: false, error: e.message } }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('pick-files', async (_e, { title, extensions } = {}) => {
+  const result = await dialog.showOpenDialog({
+    title: title || 'Wybierz pliki',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Images', extensions: extensions || ['jpg','jpeg','png','gif','webp','bmp','tiff','avif'] }]
+  })
+  return result.canceled ? [] : result.filePaths
 })
 
 ipcMain.handle('pick-wallpaper', async () => {

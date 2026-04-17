@@ -38,15 +38,27 @@ const FolderCard = memo(function FolderCard({ folder, size, onOpen, onRightClick
   const lang = useLangCode()
   const [count,   setCount]   = useState(null)
   const [preview, setPreview] = useState([])
+  const [loading, setLoading] = useState(true)
   const [hovered, setHovered] = useState(false)
-  const deckRef = useRef(null)
+  const deckRef      = useRef(null)
+  const containerRef = useRef(null)
 
   useEffect(() => {
-    window.api?.getFolderPreview(folder.path).then(res => {
-      if (!res) return
-      setCount(res.count)
-      setPreview(res.urls ?? [])
-    })
+    const el = containerRef.current
+    if (!el) return
+    let cancelled = false
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      observer.disconnect()
+      window.api?.getFolderPreview(folder.path).then(res => {
+        if (cancelled || !res) return
+        setCount(res.count)
+        setPreview(res.thumbs ?? [])
+        setLoading(false)
+      })
+    }, { rootMargin: '300px' })
+    observer.observe(el)
+    return () => { cancelled = true; observer.disconnect() }
   }, [folder.path])
 
   // ── Tilt only the deck, not the whole card ──
@@ -92,6 +104,7 @@ const FolderCard = memo(function FolderCard({ folder, size, onOpen, onRightClick
 
   return (
     <div
+      ref={containerRef}
       className={styles.folderCard}
       style={{ width: size, height: size }}
       onClick={onOpen}
@@ -102,7 +115,11 @@ const FolderCard = memo(function FolderCard({ folder, size, onOpen, onRightClick
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onRightClick?.(e, folder) }}
     >
       <div ref={deckRef} className={styles.deck} style={{ width: thumbW, height: thumbH }}>
-        {preview.length > 0
+        {loading ? (
+          <div className={styles.deckCardWrap} style={{ zIndex: 0 }}>
+            <div className={`${styles.deckCard} ${styles.deckSkeleton}`} />
+          </div>
+        ) : preview.length > 0
           ? preview.slice(0, 3).map((url, i) => (
               <div key={i} className={styles.deckCardWrap} style={getDeckWrapStyle(i)}>
                 <div className={styles.deckCard}>
@@ -166,7 +183,7 @@ function getPreview() {
     position:fixed; pointer-events:none; z-index:9998;
     border-radius:10px; overflow:hidden;
     border:1.5px solid rgba(255,255,255,0.22);
-    box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(191,90,242,0.18);
+    box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(var(--accent-rgb),0.18);
     opacity:0; transition:opacity 200ms ease, transform 200ms cubic-bezier(0.34,1.56,0.64,1);
     transform:scale(0.92); will-change:transform,opacity;
   `
@@ -185,7 +202,7 @@ function getVideoPreview() {
     position:fixed; pointer-events:none; z-index:9998;
     border-radius:10px; overflow:hidden;
     border:1.5px solid rgba(255,255,255,0.22);
-    box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(191,90,242,0.18);
+    box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(var(--accent-rgb),0.18);
     opacity:0; transition:opacity 200ms ease, transform 200ms cubic-bezier(0.34,1.56,0.64,1);
     transform:scale(0.92); will-change:transform,opacity;
   `
@@ -556,10 +573,9 @@ const ListRow = memo(function ListRow({ img, index, onSelect, onRightClick, isSe
 
 // ── Main Gallery ──
 // ── Virtual grid helpers ──────────────────────────────────────────────────────
-function useGridLayout(containerRef, size) {
+function useGridLayout(el, size) {
   const [layout, setLayout] = useState({ cols: 4, height: 0, width: 0 })
   useLayoutEffect(() => {
-    const el = containerRef.current
     if (!el) return
     const update = (w, h) => setLayout({
       cols: Math.max(1, Math.floor((w - VGRID_PADDING * 2 + VGRID_GAP) / (size + VGRID_GAP))),
@@ -570,7 +586,7 @@ function useGridLayout(containerRef, size) {
     const ro = new ResizeObserver(([e]) => update(e.target.offsetWidth, e.target.offsetHeight))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [containerRef, size])
+  }, [el, size])
   return layout
 }
 
@@ -598,10 +614,10 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
   const [ctxMenu,         setCtxMenu]         = useState(null)
   const [showBulkExport,  setShowBulkExport]  = useState(false)
 
-  // Virtual grid
-  const gridContainerRef = useRef(null)
-  const listRef          = useRef(null)
-  const { cols, height: gridHeight, width: gridWidth } = useGridLayout(gridContainerRef, size)
+  // Virtual grid — callback ref so useLayoutEffect fires when element mounts
+  const [gridEl, setGridEl] = useState(null)
+  const listRef             = useRef(null)
+  const { cols, height: gridHeight, width: gridWidth } = useGridLayout(gridEl, size)
 
   const handleRightClick = useCallback((e, img, index) => {
     setCtxMenu({ x: e.clientX, y: e.clientY, image: img, index })
@@ -727,7 +743,7 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
         </div>
       ) : (
         <div
-          ref={gridContainerRef}
+          ref={setGridEl}
           className={styles.virtualGridOuter}
           onContextMenu={e => {
             if (!e.target.closest(`.${styles.card}`) && !e.target.closest(`.${styles.folderCard}`)) {

@@ -10,7 +10,7 @@ export function saveTags(tags) {
 
 // Consistent color per tag name (hash → 6 presets)
 const COLORS = [
-  { bg: 'rgba(191,90,242,0.22)',  border: 'rgba(191,90,242,0.55)', text: 'rgba(220,170,255,0.95)' },
+  { bg: 'rgba(var(--accent-rgb),0.22)',  border: 'rgba(var(--accent-rgb),0.55)', text: 'rgba(220,170,255,0.95)' },
   { bg: 'rgba(10,132,255,0.22)',  border: 'rgba(10,132,255,0.55)',  text: 'rgba(140,200,255,0.95)' },
   { bg: 'rgba(52,199,89,0.22)',   border: 'rgba(52,199,89,0.55)',   text: 'rgba(140,230,160,0.95)' },
   { bg: 'rgba(255,149,0,0.22)',   border: 'rgba(255,149,0,0.55)',   text: 'rgba(255,200,110,0.95)' },

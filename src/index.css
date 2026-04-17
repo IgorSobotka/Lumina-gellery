@@ -24,6 +24,8 @@
 
   /* Accent */
   --accent:       #bf5af2;
+  --accent-rgb:   191, 90, 242;
+  --accent-text:  #ddb0ff;
   --accent-hover: #cc72f5;
   --accent-glow:  rgba(191,90,242, 0.55);
   --accent-glass: rgba(191,90,242, 0.22);

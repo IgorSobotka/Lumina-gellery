@@ -115,6 +115,21 @@
   display: block;
 }
 
+.deckSkeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+@keyframes skeletonShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Shine that travels with mouse on each mini card */
 .deckShine {
   position: absolute; inset: 0;
@@ -218,7 +233,7 @@
 
 .ext {
   font-size: 9px; font-weight: 800; color: white; letter-spacing: 0.07em;
-  background: rgba(191,90,242,0.70);
+  background: rgba(var(--accent-rgb),0.70);
   border: 1px solid rgba(255,255,255,0.22);
   padding: 2px 6px; border-radius: var(--radius-pill);
 }
@@ -246,8 +261,8 @@
 .card:hover .checkBox,
 .cardSelected .checkBox { opacity: 1; }
 .checkBoxOn {
-  background: rgba(191,90,242,0.85) !important;
-  border-color: rgba(191,90,242,1) !important;
+  background: rgba(var(--accent-rgb),0.85) !important;
+  border-color: rgba(var(--accent-rgb),1) !important;
 }
 
 /* ── Selection floating bar ── */
@@ -291,7 +306,7 @@
   transition: all var(--transition); cursor: pointer;
 }
 .selFmtBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
-.selFmtActive { background: rgba(191,90,242,0.22); border-color: rgba(191,90,242,0.42); color: #ddb0ff; }
+.selFmtActive { background: rgba(var(--accent-rgb),0.22); border-color: rgba(var(--accent-rgb),0.42); color: var(--accent-text); }
 
 /* destination button */
 .selDestBtn {
@@ -400,7 +415,7 @@
   cursor: pointer; background: transparent; transition: all var(--transition);
 }
 .bulkFmtBtn:hover { background: rgba(255,255,255,0.10); color: var(--text-1); }
-.bulkFmtActive { background: rgba(191,90,242,0.22) !important; border-color: rgba(191,90,242,0.45) !important; color: #ddb0ff !important; }
+.bulkFmtActive { background: rgba(var(--accent-rgb),0.22) !important; border-color: rgba(var(--accent-rgb),0.45) !important; color: var(--accent-text) !important; }
 
 .bulkQualityRow {
   display: flex; align-items: center; gap: 8px; margin-top: 8px;
@@ -413,8 +428,8 @@
 }
 .bulkQualityRange::-webkit-slider-thumb {
   -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
-  background: rgba(191,90,242,0.9); border: 2px solid rgba(255,255,255,0.7);
-  box-shadow: 0 0 6px rgba(191,90,242,0.5); cursor: pointer;
+  background: rgba(var(--accent-rgb),0.9); border: 2px solid rgba(255,255,255,0.7);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb),0.5); cursor: pointer;
 }
 
 .bulkDestBtn {
@@ -517,8 +532,8 @@
 .listRow:hover .listCheckBox,
 .listRowSelected .listCheckBox { opacity: 1; }
 .listCheckBoxOn {
-  background: rgba(191,90,242,0.85) !important;
-  border-color: rgba(191,90,242,1) !important;
+  background: rgba(var(--accent-rgb),0.85) !important;
+  border-color: rgba(var(--accent-rgb),1) !important;
 }
 
 .listThumb {
@@ -537,7 +552,7 @@
 
 .listExt {
   font-size: 9px; font-weight: 800; color: white; letter-spacing: 0.07em;
-  background: rgba(191,90,242,0.60); border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(var(--accent-rgb),0.60); border: 1px solid rgba(255,255,255,0.18);
   padding: 2px 6px; border-radius: var(--radius-pill); flex-shrink: 0;
 }
 

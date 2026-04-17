@@ -12,7 +12,7 @@
   transition: color var(--transition), border-color var(--transition);
 }
 .tab:hover { color: var(--text-2); }
-.tabActive { color: #ddb0ff; border-bottom-color: rgba(191,90,242,0.7); }
+.tabActive { color: var(--accent-text); border-bottom-color: rgba(var(--accent-rgb),0.7); }
 
 /* ── Scroll area below tabs ── */
 .panel > *:not(.tabs) { overflow-y: auto; }
@@ -38,7 +38,7 @@
   transition: all var(--transition); cursor: pointer;
 }
 .toolBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
-.toolBtnActive { background: rgba(191,90,242,0.20) !important; border-color: rgba(191,90,242,0.40) !important; color: #ddb0ff !important; }
+.toolBtnActive { background: rgba(var(--accent-rgb),0.20) !important; border-color: rgba(var(--accent-rgb),0.40) !important; color: var(--accent-text) !important; }
 
 /* ── Slider ── */
 .sliderRow { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
@@ -54,7 +54,7 @@
 .sliderTrack { position: relative; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.10); }
 .sliderFill {
   position: absolute; left: 0; top: 0; height: 100%; border-radius: 2px;
-  background: linear-gradient(90deg,rgba(191,90,242,0.7),rgba(94,92,230,0.7));
+  background: linear-gradient(90deg,rgba(var(--accent-rgb),0.7),rgba(94,92,230,0.7));
   pointer-events: none;
 }
 .sliderInput { position: absolute; inset: -5px 0; width: 100%; height: 14px; opacity: 0; cursor: pointer; margin: 0; }
@@ -65,9 +65,9 @@
 .cropResetBtn { width: 48px; flex-shrink: 0; color: rgba(255,107,98,0.8) !important; }
 .cropResetBtn:hover { background: rgba(255,69,58,0.18) !important; border-color: rgba(255,69,58,0.34) !important; color: #ff6b62 !important; }
 .cropInfo {
-  margin-top: 7px; font-size: 9px; color: #ddb0ff; font-weight: 600;
+  margin-top: 7px; font-size: 9px; color: var(--accent-text); font-weight: 600;
   text-align: center; letter-spacing: 0.06em;
-  background: rgba(191,90,242,0.12); border: 1px solid rgba(191,90,242,0.22);
+  background: rgba(var(--accent-rgb),0.12); border: 1px solid rgba(var(--accent-rgb),0.22);
   border-radius: var(--radius-pill); padding: 3px 8px;
 }
 
@@ -89,7 +89,7 @@
   transition: all var(--transition); cursor: pointer;
 }
 .fmtBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
-.fmtBtnActive { background: rgba(191,90,242,0.22); border-color: rgba(191,90,242,0.42); color: #ddb0ff; }
+.fmtBtnActive { background: rgba(var(--accent-rgb),0.22); border-color: rgba(var(--accent-rgb),0.42); color: var(--accent-text); }
 
 .exportBtns { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
 .saveBtn {

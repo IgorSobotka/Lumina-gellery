@@ -52,7 +52,7 @@
   opacity: 0; transition: opacity var(--transition);
 }
 .row:hover .checkBox, .rowSelected .checkBox { opacity: 1; }
-.checkBoxOn { background: rgba(191,90,242,0.85) !important; border-color: rgba(191,90,242,1) !important; }
+.checkBoxOn { background: rgba(var(--accent-rgb),0.85) !important; border-color: rgba(var(--accent-rgb),1) !important; }
 
 .thumb { width: 40px; height: 40px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: rgba(0,0,0,0.25); }
 .thumbImg { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -63,7 +63,7 @@
 
 .ext {
   font-size: 9px; font-weight: 800; color: white; letter-spacing: 0.07em;
-  background: rgba(191,90,242,0.55); border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(var(--accent-rgb),0.55); border: 1px solid rgba(255,255,255,0.15);
   padding: 2px 6px; border-radius: var(--radius-pill); flex-shrink: 0;
 }
 .meta { font-size: 11px; color: var(--text-3); flex-shrink: 0; min-width: 55px; text-align: right; }

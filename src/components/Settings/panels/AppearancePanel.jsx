@@ -1,11 +1,16 @@
 import { useLang } from '../../../i18n/index'
 import { WALLPAPERS } from '../../../constants/wallpapers'
+import { ACCENTS } from '../../../utils/accent'
+import { useRef } from 'react'
 import styles from './AppearancePanel.module.css'
 
 export default function AppearancePanel({ settings, onSettingsChange }) {
   const t = useLang()
-  const current   = settings.wallpaper
-  const blurValue = settings.wallpaperBlur ?? 0
+  const current      = settings.wallpaper
+  const blurValue    = settings.wallpaperBlur ?? 0
+  const accentId     = settings.accentColor ?? 'lavender'
+  const accentCustom = settings.accentCustom ?? '#c4a3e8'
+  const colorInputRef = useRef(null)
 
   async function handlePickCustom() {
     const p = await window.api.pickWallpaper()
@@ -78,6 +83,42 @@ export default function AppearancePanel({ settings, onSettingsChange }) {
             </div>
             <span className={styles.wallpaperLabel}>{t('customWallpaper')}</span>
           </button>
+        </div>
+      </section>
+
+      {/* ── Accent color ── */}
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>{t('accentSec')}</div>
+        <div className={styles.accentRow}>
+          {ACCENTS.map(a => (
+            <button
+              key={a.id}
+              className={`${styles.accentDot} ${accentId === a.id ? styles.accentDotActive : ''}`}
+              style={{ '--dot-color': a.hex }}
+              onClick={() => onSettingsChange({ ...settings, accentColor: a.id })}
+              title={a.label}
+            />
+          ))}
+          {/* Custom color picker */}
+          <button
+            className={`${styles.accentDot} ${styles.accentDotCustom} ${accentId === 'custom' ? styles.accentDotActive : ''}`}
+            style={{ '--dot-color': accentId === 'custom' ? accentCustom : 'rgba(255,255,255,0.15)' }}
+            onClick={() => colorInputRef.current?.click()}
+            title="Własny kolor"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 3a9 9 0 010 18"/>
+              <path d="M3 12h18" opacity="0.5"/>
+            </svg>
+          </button>
+          <input
+            ref={colorInputRef}
+            type="color"
+            className={styles.colorInput}
+            value={accentId === 'custom' ? accentCustom : '#c4a3e8'}
+            onChange={e => onSettingsChange({ ...settings, accentColor: 'custom', accentCustom: e.target.value })}
+          />
         </div>
       </section>
 
