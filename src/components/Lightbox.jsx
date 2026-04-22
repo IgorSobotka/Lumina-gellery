@@ -14,37 +14,64 @@ function formatSize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-// ── Slider (shared) ──────────────────────────────────────────────────────────
-function Slider({ label, value, min, max, defaultVal, onChange }) {
-  const pct = ((value - min) / (max - min)) * 100
+// ── Watermark preview overlay ─────────────────────────────────────────────────
+// Lives inside the transformed image wrapper — no DOM measurement needed,
+// moves with the image instantly (zero lag).
+function WatermarkPreview({ wm }) {
+  if (!wm?.enabled || !wm?.text) return null
+
+  const pos    = wm.position ?? 'bottomRight'
+  const alignV = pos.startsWith('top') ? 'flex-start' : pos.startsWith('bottom') ? 'flex-end' : 'center'
+  const alignH = pos.endsWith('Left')  ? 'flex-start' : pos.endsWith('Right')  ? 'flex-end' : 'center'
+
   return (
-    <label className={styles.sliderRow}>
-      <div className={styles.sliderTop}>
-        <span className={styles.sliderLabel}>{label}</span>
-        <span className={styles.sliderVal}>{value > 0 && min < 0 ? `+${value}` : value}</span>
-      </div>
-      <div className={styles.sliderTrack}>
-        <div className={styles.sliderFill} style={{ width: `${pct}%` }} />
-        <input type="range" min={min} max={max} value={value}
-          onChange={e => onChange(Number(e.target.value))}
-          onDoubleClick={() => onChange(defaultVal)}
-          className={styles.sliderInput} />
-      </div>
-    </label>
+    <div style={{
+      position: 'absolute', inset: 0,
+      pointerEvents: 'none', zIndex: 15,
+      display: 'flex', alignItems: alignV, justifyContent: alignH,
+    }}>
+      <span style={{
+        opacity: (wm.opacity ?? 70) / 100,
+        color: wm.color ?? '#fff',
+        fontSize: Math.max(12, wm.fontSize ?? 20) + 'px',
+        fontWeight: 700,
+        textShadow: '0 1px 8px rgba(0,0,0,0.75), 0 0 3px rgba(0,0,0,0.6)',
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        userSelect: 'none', padding: '8px 12px', letterSpacing: '-0.01em',
+        whiteSpace: 'nowrap',
+      }}>
+        {wm.text}
+      </span>
+    </div>
   )
 }
 
-// ── Export panel (right side) ────────────────────────────────────────────────
-function ExportPanel({ imgRef, imgPath, editState, onClose }) {
+// ── Export panel (floating card) ──────────────────────────────────────────────
+function ExportPanel({ imgRef, imgPath, editState, onClose, wm, setWm }) {
   const t    = useLang()
   const lang = useLangCode()
-  const [format,  setFormat]  = useState('jpeg')
-  const [quality, setQuality] = useState(92)
-  const [destDir, setDestDir] = useState(null)   // null = same as source
-  const [saving,  setSaving]  = useState(false)
-  const [msg,     setMsg]     = useState(null)
+  const [format,    setFormat]    = useState('jpeg')
+  const [quality,   setQuality]   = useState(92)
+  const [destDir,   setDestDir]   = useState(null)
+  const [saving,    setSaving]    = useState(false)
+  const [msg,       setMsg]       = useState(null)
+  const [resizePct, setResizePct] = useState(100)
+  const [customW,   setCustomW]   = useState('')
+  const [useCustom, setUseCustom] = useState(false)
 
-  const edited = isEdited(editState)
+  const edited   = isEdited(editState)
+  const naturalW = imgRef.current?.naturalWidth  || 0
+  const naturalH = imgRef.current?.naturalHeight || 0
+  const previewW = useCustom && customW ? Number(customW) : Math.round(naturalW * resizePct / 100)
+  const previewH = useCustom && customW && naturalW
+    ? Math.round(naturalH * (Number(customW) / naturalW))
+    : Math.round(naturalH * resizePct / 100)
+
+  const getResize = () => {
+    if (useCustom && customW) return { w: Number(customW) }
+    if (resizePct === 100)    return null
+    return { pct: resizePct }
+  }
 
   const pickFolder = async () => {
     const p = await window.api?.selectFolder()
@@ -55,96 +82,166 @@ function ExportPanel({ imgRef, imgPath, editState, onClose }) {
     if (!imgRef.current || !imgPath) return
     setSaving(true); setMsg(null)
     try {
-      const dataURL = exportCanvas(imgRef.current, editState, format, quality / 100)
+      const dataURL = exportCanvas(imgRef.current, editState, format, quality / 100, getResize(), wm.enabled ? wm : null)
       const res = await window.api.saveImageFile({ sourcePath: imgPath, dataURL, mode, destDir: mode === 'copy' ? destDir : null })
       if (res.success) {
         setMsg(mode === 'overwrite' ? t('savedSuccess') : savedAs(res.savedPath?.split(/[\\/]/).pop(), lang))
       } else { setMsg(t('saveError')) }
-      setTimeout(() => setMsg(null), 3000)
+      setTimeout(() => setMsg(null), 3500)
     } catch { setMsg(t('errorGeneric')) }
     setSaving(false)
   }
 
+  const WM_POSITIONS = ['topLeft','topCenter','topRight','middleLeft','center','middleRight','bottomLeft','bottomCenter','bottomRight']
+
   return (
-    <div className={styles.exportPanel}>
-      {/* Header */}
-      <div className={styles.panelHeader} onClick={onClose}>
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-          <path d="M2 12V10a6 6 0 016-6h1M13 6l2-2-2-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-          <rect x="1" y="12" width="14" height="2.5" rx="1.2" stroke="currentColor" strokeWidth="1.2"/>
-        </svg>
-        {t('exportPanelTitle')}
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ marginLeft:'auto', opacity: 0.45 }}>
-          <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-        </svg>
+    <div className={styles.exportFloat}>
+      {/* ── Header ── */}
+      <div className={styles.efHeader}>
+        <span className={styles.efTitle}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          {t('exportPanelTitle')}
+        </span>
+        <button className={styles.efClose} onClick={onClose}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </button>
       </div>
 
-      <div className={styles.panelScroll}>
-        {/* Format */}
-        <div className={styles.epGroup}>
-          <div className={styles.epLabel}>{t('infoFormat')}</div>
-          <div className={styles.epFmtRow}>
+      <div className={styles.efBody}>
+        {/* ── Format + Quality ── */}
+        <div className={styles.efSection}>
+          <div className={styles.efSectionTitle}>{t('infoFormat')}</div>
+          <div className={styles.efFmtRow}>
             {['jpeg','png','webp'].map(f => (
               <button key={f}
-                className={`${styles.epFmtBtn} ${format === f ? styles.epFmtActive : ''}`}
+                className={`${styles.efFmtBtn} ${format === f ? styles.efFmtActive : ''}`}
                 onClick={() => setFormat(f)}>
                 {f.toUpperCase()}
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Quality */}
-        {format !== 'png' && (
-          <div className={styles.epGroup}>
-            <div className={styles.epLabel}>{t('quality')}</div>
-            <Slider label={`${quality}%`} value={quality} min={10} max={100} defaultVal={92} onChange={setQuality} />
-          </div>
-        )}
-
-        {/* Location */}
-        <div className={styles.epGroup}>
-          <div className={styles.epLabel}>{t('copyLocation')}</div>
-          <div className={styles.epLocRow}>
-            <button
-              className={`${styles.epLocBtn} ${!destDir ? styles.epLocActive : ''}`}
-              onClick={() => setDestDir(null)}>
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M1 3.5A1.5 1.5 0 012.5 2h3l1.5 2H12a1.5 1.5 0 011.5 1.5v6A1.5 1.5 0 0112 13H2a1.5 1.5 0 01-1.5-1.5v-8z" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-              {t('nextToOriginal')}
-            </button>
-            <button className={`${styles.epLocBtn} ${destDir ? styles.epLocActive : ''}`} onClick={pickFolder}>
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M7 2v8M4 7l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M1 12h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              {t('chooseDest')}
-            </button>
-          </div>
-          {destDir && (
-            <div className={styles.epPath} title={destDir}>
-              <svg width="10" height="10" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-                <path d="M1 3.5A1.5 1.5 0 012.5 2h3l1.5 2H12a1.5 1.5 0 011.5 1.5v6A1.5 1.5 0 0112 13H2a1.5 1.5 0 01-1.5-1.5v-8z" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-              {destDir}
+          {format !== 'png' && (
+            <div className={styles.efQualRow}>
+              <span className={styles.efMetaLabel}>{t('quality')}</span>
+              <input type="range" min={10} max={100} value={quality}
+                onChange={e => setQuality(+e.target.value)} className={styles.efRange} />
+              <span className={styles.efMetaVal}>{quality}%</span>
             </div>
           )}
         </div>
 
-        {/* Save buttons */}
-        <div className={styles.epGroup}>
-          <button className={styles.epSaveBtn} onClick={() => save('copy')} disabled={saving}>
+        {/* ── Resize ── */}
+        <div className={styles.efSection}>
+          <div className={styles.efSectionTitle}>{t('exportResizeSec')}</div>
+          <div className={styles.efChipRow}>
+            {[100, 75, 50, 25].map(pct => (
+              <button key={pct}
+                className={`${styles.efChip} ${!useCustom && resizePct === pct ? styles.efChipActive : ''}`}
+                onClick={() => { setResizePct(pct); setUseCustom(false) }}>
+                {pct === 100 ? t('exportResizeOriginal') : `${pct}%`}
+              </button>
+            ))}
+            <button className={`${styles.efChip} ${useCustom ? styles.efChipActive : ''}`}
+              onClick={() => setUseCustom(v => !v)}>
+              {t('exportResizeCustom')}
+            </button>
+          </div>
+          {useCustom && (
+            <div className={styles.efCustomRow}>
+              <span className={styles.efMetaLabel}>{t('exportResizeWidth')}</span>
+              <input className={styles.efCustomInput} type="number" min={1} max={99999}
+                placeholder={naturalW || ''} value={customW}
+                onChange={e => setCustomW(e.target.value)} />
+              <span className={styles.efMetaLabel}>{t('exportResizePx')}</span>
+            </div>
+          )}
+          {previewW > 0 && previewH > 0 && (
+            <div className={styles.efDims}>{previewW} × {previewH} px</div>
+          )}
+        </div>
+
+        {/* ── Watermark ── */}
+        <div className={styles.efSection}>
+          <div className={styles.efTitleRow}>
+            <span className={styles.efSectionTitle}>{t('watermarkSec')}</span>
+            <button className={`${styles.efToggle} ${wm.enabled ? styles.efToggleOn : ''}`}
+              onClick={() => setWm(w => ({ ...w, enabled: !w.enabled }))}>
+              {wm.enabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+          {wm.enabled && (
+            <div className={styles.efWmBox}>
+              <input className={styles.efWmText} type="text" placeholder="© Your Name"
+                value={wm.text} onChange={e => setWm(w => ({ ...w, text: e.target.value }))}
+                maxLength={80} />
+              <div className={styles.efWmLayout}>
+                {/* 3×3 position grid */}
+                <div className={styles.efWmPosGrid}>
+                  {WM_POSITIONS.map(pos => (
+                    <button key={pos}
+                      className={`${styles.efWmPosBtn} ${wm.position === pos ? styles.efWmPosActive : ''}`}
+                      onClick={() => setWm(w => ({ ...w, position: pos }))}
+                      title={pos} />
+                  ))}
+                </div>
+                {/* Controls */}
+                <div className={styles.efWmControls}>
+                  <div className={styles.efWmCtrlRow}>
+                    <span>{t('watermarkOpacity')}</span>
+                    <input type="range" min={10} max={100} value={wm.opacity}
+                      onChange={e => setWm(w => ({ ...w, opacity: +e.target.value }))}
+                      className={styles.efRange} />
+                    <span>{wm.opacity}%</span>
+                  </div>
+                  <div className={styles.efWmCtrlRow}>
+                    <span>{t('watermarkSize')}</span>
+                    <input type="range" min={8} max={60} value={wm.fontSize}
+                      onChange={e => setWm(w => ({ ...w, fontSize: +e.target.value }))}
+                      className={styles.efRange} />
+                    <span>{wm.fontSize}</span>
+                  </div>
+                  <div className={styles.efWmCtrlRow}>
+                    <span>{t('watermarkColor')}</span>
+                    <input type="color" value={wm.color}
+                      onChange={e => setWm(w => ({ ...w, color: e.target.value }))}
+                      className={styles.efWmColor} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Location ── */}
+        <div className={styles.efSection}>
+          <div className={styles.efSectionTitle}>{t('copyLocation')}</div>
+          <div className={styles.efLocRow}>
+            <button className={`${styles.efLocBtn} ${!destDir ? styles.efLocActive : ''}`}
+              onClick={() => setDestDir(null)}>{t('nextToOriginal')}</button>
+            <button className={`${styles.efLocBtn} ${destDir ? styles.efLocActive : ''}`}
+              onClick={pickFolder}>{t('chooseDest')}</button>
+          </div>
+          {destDir && <div className={styles.efPath} title={destDir}>{destDir}</div>}
+        </div>
+
+        {/* ── Save ── */}
+        <div className={styles.efActions}>
+          <button className={styles.efSaveBtn} onClick={() => save('copy')} disabled={saving}>
             {saving ? '…' : t('saveCopy')}
           </button>
-          <button className={`${styles.epSaveBtn} ${styles.epSaveBtnOver}`} onClick={() => save('overwrite')} disabled={saving || !edited}
+          <button className={`${styles.efSaveBtn} ${styles.efSaveBtnOver}`}
+            onClick={() => save('overwrite')} disabled={saving || !edited}
             title={!edited ? t('noChangesToSave') : t('willOverwrite')}>
             {t('overwriteOriginal')}
           </button>
+          {msg && <div className={`${styles.efMsg} ${msg.startsWith('✕') ? styles.efMsgErr : ''}`}>{msg}</div>}
+          {!edited && <div className={styles.efHint}>{t('noEditsHint')}</div>}
         </div>
-
-        {msg && <div className={`${styles.epMsg} ${msg.startsWith('✕') ? styles.epMsgErr : ''}`}>{msg}</div>}
-        {!edited && <div className={styles.epHint}>{t('noEditsHint')}</div>}
       </div>
     </div>
   )
@@ -153,7 +250,7 @@ function ExportPanel({ imgRef, imgPath, editState, onClose }) {
 // ── Crop overlay ─────────────────────────────────────────────────────────────
 const HANDLE = 10
 
-function CropOverlay({ imgRef, onApply, onCancel, initialCrop }) {
+function CropOverlay({ imgRef, onApply, onCancel, initialCrop, aspectRatio }) {
   const t          = useLang()
   const overlayRef = useRef(null)
   const imgBounds  = useRef(null)
@@ -170,10 +267,24 @@ function CropOverlay({ imgRef, onApply, onCancel, initialCrop }) {
     const b  = { x: ir.left - or.left, y: ir.top - or.top, w: ir.width, h: ir.height }
     imgBounds.current = b
     if (initialCrop) {
-      setBox({ x: b.x + initialCrop.x * b.w, y: b.y + initialCrop.y * b.h,
-               w: initialCrop.w * b.w,        h: initialCrop.h * b.h })
+      let bx = { x: b.x + initialCrop.x * b.w, y: b.y + initialCrop.y * b.h,
+                 w: initialCrop.w * b.w,         h: initialCrop.h * b.h }
+      // Enforce aspect ratio if provided
+      if (aspectRatio) {
+        const targetH = bx.w * aspectRatio.h / aspectRatio.w
+        bx = { ...bx, h: targetH }
+      }
+      setBox(bx)
     } else {
-      setBox({ x: b.x, y: b.y, w: b.w, h: b.h })
+      // Initial box: fit aspect ratio in center
+      if (aspectRatio) {
+        const ratio = aspectRatio.w / aspectRatio.h
+        let bw = b.w * 0.8, bh = bw / ratio
+        if (bh > b.h * 0.8) { bh = b.h * 0.8; bw = bh * ratio }
+        setBox({ x: b.x + (b.w - bw) / 2, y: b.y + (b.h - bh) / 2, w: bw, h: bh })
+      } else {
+        setBox({ x: b.x, y: b.y, w: b.w, h: b.h })
+      }
     }
     setReady(true)
   }, []) // eslint-disable-line
@@ -189,21 +300,27 @@ function CropOverlay({ imgRef, onApply, onCancel, initialCrop }) {
       const b  = imgBounds.current
       if (!b) return
       let { x, y, w, h: ht } = sb
+      const ratio = aspectRatio ? aspectRatio.w / aspectRatio.h : null
       if (h === 'move') {
         x = clamp(sb.x + dx, b.x, b.x + b.w - sb.w)
         y = clamp(sb.y + dy, b.y, b.y + b.h - sb.h)
       } else {
-        if (h.includes('e')) w  = clamp(sb.w + dx, 20, b.x + b.w - sb.x)
-        if (h.includes('s')) ht = clamp(sb.h + dy, 20, b.y + b.h - sb.y)
-        if (h.includes('w')) { const nx = clamp(sb.x + dx, b.x, sb.x + sb.w - 20); w = sb.w + (sb.x - nx); x = nx }
-        if (h.includes('n')) { const ny = clamp(sb.y + dy, b.y, sb.y + sb.h - 20); ht = sb.h + (sb.y - ny); y = ny }
+        if (h.includes('e')) { w = clamp(sb.w + dx, 20, b.x + b.w - sb.x); if (ratio) ht = w / ratio }
+        if (h.includes('s') && !ratio) ht = clamp(sb.h + dy, 20, b.y + b.h - sb.y)
+        if (h.includes('w')) { const nx = clamp(sb.x + dx, b.x, sb.x + sb.w - 20); w = sb.w + (sb.x - nx); x = nx; if (ratio) ht = w / ratio }
+        if (h.includes('n') && !ratio) { const ny = clamp(sb.y + dy, b.y, sb.y + sb.h - 20); ht = sb.h + (sb.y - ny); y = ny }
+        // For ratio+n handles: adjust from top and match height
+        if (ratio && h.includes('n') && !h.includes('e') && !h.includes('w')) {
+          const ny = clamp(sb.y + dy, b.y, sb.y + sb.h - 20)
+          ht = sb.h + (sb.y - ny); y = ny; w = ht * ratio
+        }
       }
       setBox({ x, y, w, h: ht })
     }
     const onUp = () => { drag.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [box])
+  }, [box, aspectRatio])
 
   const handleApply = () => {
     const b = imgBounds.current
@@ -443,16 +560,19 @@ function ExifSection({ exif, t }) {
 export default function Lightbox({ images, index, onClose, onPrev, onNext, onChange, tags, onTagsChange, edits, onEditChange }) {
   const t    = useLang()
   const lang = useLangCode()
-  const [scale,      setScale]      = useState(1)
-  const [pan,        setPan]        = useState({ x: 0, y: 0 })
-  const [dragging,   setDragging]   = useState(false)
-  const [showInfo,   setShowInfo]   = useState(false)
-  const [showEditor, setShowEditor] = useState(false)
-  const [showExport, setShowExport] = useState(false)
-  const [cropMode,   setCropMode]   = useState(false)
-  const [editState,  setEditState]  = useState(() => edits?.[images[index]?.path] ?? DEFAULT_EDIT)
-  const [tagInput,   setTagInput]   = useState('')
-  const [exif,       setExif]       = useState(null)
+  const [scale,        setScale]        = useState(1)
+  const [pan,          setPan]          = useState({ x: 0, y: 0 })
+  const [dragging,     setDragging]     = useState(false)
+  const [showInfo,     setShowInfo]     = useState(false)
+  const [showEditor,   setShowEditor]   = useState(false)
+  const [showExport,   setShowExport]   = useState(false)
+  const [cropMode,     setCropMode]     = useState(false)
+  const [editState,    setEditState]    = useState(() => edits?.[images[index]?.path] ?? DEFAULT_EDIT)
+  const [tagInput,     setTagInput]     = useState('')
+  const [exif,         setExif]         = useState(null)
+  const [showOriginal, setShowOriginal] = useState(false)
+  const [cropRatio,    setCropRatio]    = useState(null)  // { w, h } or null
+  const [wm,           setWm]          = useState({ enabled: false, text: '© ', opacity: 70, fontSize: 20, color: '#ffffff', position: 'bottomRight' })
   const dragStart    = useRef(null)
   const imgRef       = useRef(null)
   const containerRef = useRef(null)
@@ -476,6 +596,7 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
     setScale(1); setPan({ x: 0, y: 0 }); setTagInput('')
     setEditState(edits?.[images[index]?.path] ?? DEFAULT_EDIT)
     setCropMode(false)
+    setShowOriginal(false)
     setExif(null)
   }, [index]) // eslint-disable-line
 
@@ -494,8 +615,9 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
   const openExport = () => { setShowExport(true); setShowInfo(false)  }
   const openEditor = () => { setShowEditor(true) }
 
-  const handleStartCrop = () => {
+  const handleStartCrop = (ratio = null) => {
     setScale(1); setPan({ x: 0, y: 0 })
+    setCropRatio(ratio)
     setCropMode(true)
     setShowEditor(true)
   }
@@ -522,8 +644,11 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
   const canPrev = index > 0
   const canNext = index < images.length - 1
   const onChange_ = (s) => { setEditState(s); onEditChange?.(img.path, s) }
-  const cropStyle = !cropMode && editState.crop ? { clipPath: toCropCSS(editState) } : {}
-  const rightOpen = showInfo || showExport
+  // When showOriginal, display with DEFAULT_EDIT (before)
+  const displayState = showOriginal ? DEFAULT_EDIT : editState
+  const cropStyle = !cropMode && displayState.crop ? { clipPath: toCropCSS(displayState) } : {}
+  const rightOpen = showInfo  // export is now a floating card, only info uses the sidebar
+  const vigPct = (displayState.vignette ?? 0) / 100
 
   return (
     <div className={styles.overlay} onClick={handleBgClick}>
@@ -535,6 +660,22 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
           <span className={styles.imgCounter}>{index + 1} / {images.length}</span>
         </div>
         <div className={styles.topRight}>
+          {/* Before / After — only when editor open and image edited */}
+          {showEditor && !img.isVideo && isEdited(editState) && (
+            <button
+              className={`${styles.iconBtn} ${showOriginal ? styles.iconBtnActive : ''}`}
+              onMouseDown={() => setShowOriginal(true)}
+              onMouseUp={() => setShowOriginal(false)}
+              onMouseLeave={() => setShowOriginal(false)}
+              title={t('beforeAfter')}
+            >
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="3" width="6" height="10" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="9" y="3" width="6" height="10" rx="1" stroke="currentColor" strokeWidth="1.3" strokeDasharray="2 1.5"/>
+                <path d="M7.5 8h1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
           {/* Export */}
           <button className={`${styles.iconBtn} ${showExport ? styles.iconBtnActive : ''}`}
             onClick={() => showExport ? setShowExport(false) : openExport()} title={t('exportSaveBtn')}>
@@ -592,7 +733,14 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
                 <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
               </svg>
             </div>
-            <EditorPanel editState={editState} onChange={onChange_} onStartCrop={handleStartCrop} />
+            <EditorPanel
+              editState={editState}
+              onChange={onChange_}
+              onStartCrop={handleStartCrop}
+              imgRef={imgRef}
+              showOriginal={showOriginal}
+              onToggleOriginal={() => setShowOriginal(v => !v)}
+            />
           </div>
         )}
 
@@ -606,7 +754,7 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
         </button>
         <button className={`${styles.navBtn} ${styles.next} ${!canNext ? styles.disabled : ''}`}
           onClick={canNext ? onNext : undefined} title={t('nextImage')}
-          style={rightOpen ? { right: 262 } : undefined}>
+          style={rightOpen ? { right: 262 } : showExport ? { right: 310 } : undefined}>
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -624,11 +772,26 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
             <VideoPlayer src={img.url} />
           ) : (
             <>
-              <img ref={imgRef} src={img.url} alt={img.name} className={styles.img}
-                style={{ transform: toTransformCSS(editState, pan, scale), filter: toFilterCSS(editState), ...cropStyle }}
-                draggable={false} />
+              {/* Transform wrapper — carries pan/scale/rotation so watermark moves with image instantly */}
+              <div style={{
+                transform: toTransformCSS(displayState, pan, scale),
+                position: 'relative', display: 'inline-block', lineHeight: 0,
+              }}>
+                <img ref={imgRef} src={img.url} alt={img.name} className={styles.img}
+                  style={{ filter: toFilterCSS(displayState), ...cropStyle }}
+                  draggable={false} />
+                {/* Watermark live preview — inside wrapper, zero lag */}
+                {showExport && !cropMode && <WatermarkPreview wm={wm} />}
+              </div>
+              {/* Vignette overlay — full-container radial darkening */}
+              {vigPct > 0 && !cropMode && (
+                <div style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5,
+                  background: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,${(vigPct * 0.80).toFixed(3)}) 100%)`,
+                }} />
+              )}
               {cropMode && (
-                <CropOverlay imgRef={imgRef} initialCrop={editState.crop}
+                <CropOverlay imgRef={imgRef} initialCrop={editState.crop} aspectRatio={cropRatio}
                   onApply={(crop) => { onChange_({ ...editState, crop }); setCropMode(false) }}
                   onCancel={() => setCropMode(false)} />
               )}
@@ -641,7 +804,7 @@ export default function Lightbox({ images, index, onClose, onPrev, onNext, onCha
       {/* ── Right: Export panel ── */}
       {showExport && (
         <ExportPanel imgRef={imgRef} imgPath={img.path} editState={editState}
-          onClose={() => setShowExport(false)} />
+          onClose={() => setShowExport(false)} wm={wm} setWm={setWm} />
       )}
 
       {/* ── Right: Info + Tags panel ── */}

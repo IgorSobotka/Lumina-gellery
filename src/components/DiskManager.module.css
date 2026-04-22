@@ -1,0 +1,742 @@
+:root {
+  --c-red:    rgba(255,69,58,1);
+  --c-orange: rgba(255,159,10,1);
+}
+
+.wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(6, 4, 12, 0.55);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* ── Header ── */
+.header {
+  padding: 14px 20px 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.90);
+  margin-bottom: 14px;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.tab {
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+  background: transparent;
+}
+.tab:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.04); }
+.tabActive {
+  color: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+}
+
+/* ── Body ── */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 24px 32px;
+}
+
+/* ── Section ── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.sectionHeadIcon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb), 0.14);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.88);
+}
+.sectionSub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+
+/* ── Admin banner ── */
+.adminBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 159, 10, 0.10);
+  border: 1px solid rgba(255, 159, 10, 0.28);
+  font-size: 12px;
+  color: rgba(255,210,100,0.88);
+}
+.adminBannerIcon { flex-shrink: 0; color: rgba(255,180,40,0.90); }
+.adminBannerText { flex: 1; }
+.adminBannerBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255,159,10,0.18);
+  border: 1px solid rgba(255,159,10,0.40);
+  color: rgba(255,210,80,0.95);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 140ms ease;
+}
+.adminBannerBtn:hover { background: rgba(255,159,10,0.30); }
+
+.adminBannerOk {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(5,150,105,0.10);
+  border: 1px solid rgba(5,150,105,0.25);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(110,230,180,0.80);
+}
+
+/* ── Disk grid ── */
+.diskGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.diskCard {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 150ms ease, background 150ms ease, transform var(--spring), box-shadow 150ms ease;
+}
+.diskCard:hover {
+  border-color: rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.10);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.diskCardSelected {
+  border-color: rgba(var(--accent-rgb), 0.60) !important;
+  background: rgba(var(--accent-rgb), 0.10) !important;
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.25), 0 8px 24px rgba(0,0,0,0.28) !important;
+  transform: none !important;
+}
+.diskSelectedArrow {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(var(--accent-rgb), 0.8);
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.diskTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.diskIcon {
+  color: var(--accent);
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+.diskInfo { flex: 1; min-width: 0; }
+.diskName {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.diskSub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+  margin-top: 2px;
+}
+.diskPct {
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.barTrack {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 600ms cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.diskBytes {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: rgba(255,255,255,0.30);
+}
+
+/* ── Cache card ── */
+.cacheCard {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  max-width: 400px;
+}
+
+.cacheVisual {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.cacheCircle {
+  position: relative;
+  width: 80px; height: 80px;
+  flex-shrink: 0;
+}
+.cacheSvg {
+  width: 80px; height: 80px;
+}
+.cacheCircleText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.cacheSize {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.88);
+  line-height: 1;
+}
+.cacheLabel {
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+
+.cacheStats {
+  display: flex;
+  gap: 24px;
+}
+.cacheStat { text-align: center; }
+.cacheStatVal {
+  font-size: 20px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.88);
+}
+.cacheStatLabel {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 22px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255,69,58,0.12);
+  border: 1px solid rgba(255,69,58,0.28);
+  color: rgba(255,107,98,0.90);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.clearBtn:hover {
+  background: rgba(255,69,58,0.22);
+  color: #ff6b62;
+}
+
+/* ── File list ── */
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fileRow {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  transition: border-color 150ms ease;
+}
+.fileRow:hover { border-color: rgba(255,255,255,0.14); }
+
+.fileBar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: rgba(var(--accent-rgb), 0.10);
+  transition: width 400ms ease;
+  pointer-events: none;
+}
+
+.fileContent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 9px 12px;
+  gap: 10px;
+}
+
+.fileName {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileSize {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+  min-width: 56px;
+  text-align: right;
+}
+
+.fileActions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.fileRow:hover .fileActions { opacity: 1; }
+
+/* ── Icon buttons ── */
+.iconBtn {
+  width: 26px; height: 26px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.55);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.iconBtn:hover { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.88); }
+.iconBtnDanger:hover { background: rgba(255,69,58,0.20); color: #ff6b62; border-color: rgba(255,69,58,0.30); }
+
+/* ── Duplicates ── */
+.dupList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dupGroup {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.11);
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+}
+
+.dupHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 120ms ease;
+  background: transparent;
+  text-align: left;
+  gap: 12px;
+}
+.dupHeader:hover { background: rgba(255,255,255,0.05); }
+
+.dupHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.55);
+}
+.dupCount {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.78);
+}
+.dupSize {
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+}
+.dupWasted {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,159,10,0.85);
+  white-space: nowrap;
+}
+
+.dupFiles {
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+}
+
+.dupFile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 120ms ease;
+}
+.dupFile:last-child { border-bottom: none; }
+.dupFile:hover { background: rgba(255,255,255,0.04); }
+
+.dupFilePath {
+  flex: 1;
+  font-size: 11px;
+  color: rgba(255,255,255,0.50);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dupOriginal {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-text);
+  background: rgba(var(--accent-rgb), 0.15);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dupFileActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Rescan row ── */
+.rescanRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rescanInfo {
+  font-size: 12px;
+  color: rgba(255,255,255,0.40);
+}
+.rescanBtn {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-text);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.rescanBtn:hover { background: rgba(var(--accent-rgb), 0.22); }
+
+/* ── States ── */
+.empty {
+  font-size: 13px;
+  color: rgba(255,255,255,0.28);
+  padding: 40px 0;
+  text-align: center;
+}
+.spinnerWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 0;
+  justify-content: center;
+  color: rgba(255,255,255,0.40);
+  font-size: 13px;
+}
+.spinner {
+  width: 22px; height: 22px;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════
+   TREEMAP PANEL
+   ═══════════════════════════════════════════════════════════ */
+
+.treePanel {
+  margin-top: 20px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  animation: treePanelIn 240ms cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes treePanelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.treePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+}
+.treePanelTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.60);
+}
+.treePanelClose {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.45);
+  font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 120ms ease;
+  flex-shrink: 0;
+}
+.treePanelClose:hover { background: rgba(255,60,60,0.18); color: #ff6b62; border-color: rgba(255,60,60,0.28); }
+
+/* Loading */
+.treeLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: rgba(255,255,255,0.38);
+  font-size: 13px;
+}
+.treeLoadingSpinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* TreeMap view wrapper */
+.treeView {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Breadcrumb bar */
+.treeCrumbBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  font-size: 12px;
+  min-height: 34px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.treeCrumbGroup {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.treeCrumbSep {
+  color: rgba(255,255,255,0.20);
+  margin: 0 4px;
+  font-size: 11px;
+}
+.treeCrumb {
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.50);
+  cursor: pointer;
+  transition: color 100ms ease, background 100ms ease;
+}
+.treeCrumb:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.07); }
+.treeCrumbCurrent { color: rgba(255,255,255,0.88) !important; font-weight: 600; cursor: default; }
+.treeCrumbCurrent:hover { background: none; }
+
+/* Hover info (right side of breadcrumb bar) */
+.treeTotalSize {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.35);
+  flex-shrink: 0;
+  padding-left: 12px;
+}
+.treeHoverInfo {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-left: 12px;
+}
+.treeHoverName {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.80);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.treeHoverSize {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.treeHoverSub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.30);
+}
+
+/* Canvas area */
+.treeCanvas {
+  position: relative;
+  height: 340px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.18);
+}
+.treeEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.20);
+  font-size: 14px;
+}
+
+/* Individual rect */
+.treeRect {
+  position: absolute;
+  background: rgba(var(--rc-r, 109), var(--rc-g, 40), var(--rc-b, 217), 0.22);
+  background: color-mix(in srgb, var(--rc) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
+  border-radius: 3px;
+  overflow: hidden;
+  transition: background 80ms ease, border-color 80ms ease;
+  box-sizing: border-box;
+}
+.treeRectClickable { cursor: pointer; }
+.treeRectHovered {
+  background: color-mix(in srgb, var(--rc) 48%, transparent) !important;
+  border-color: color-mix(in srgb, var(--rc) 80%, transparent) !important;
+  z-index: 2;
+}
+.treeRectLabel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 4px 7px;
+  pointer-events: none;
+  gap: 2px;
+}
+.treeRectName {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.treeRectSize {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}

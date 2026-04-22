@@ -3,6 +3,7 @@ import { VariableSizeList } from 'react-window'
 import ContextMenu from './ContextMenu'
 import { useLang, useLangCode, photoCount, selectedCount, exportSelectedTitle, confirmDeleteSelected } from '../i18n/index'
 import { tagColor } from '../utils/tags'
+import { LABEL_COLORS } from '../utils/labels'
 import { exportFromUrl, DEFAULT_EDIT } from './Editor/editorUtils'
 import styles from './Gallery.module.css'
 
@@ -33,8 +34,12 @@ const SPREAD = {
 const SPRING = '320ms cubic-bezier(0.34,1.56,0.64,1)'
 const SNAP   = '60ms ease-out'
 
+// ── Module-level drag state (same singleton pattern as _bar/_preview) ──
+let _dragItems = []  // [{ src, isDir }]
+
 // ── Folder card ──
-const FolderCard = memo(function FolderCard({ folder, size, onOpen, onRightClick }) {
+const FolderCard = memo(function FolderCard({ folder, size, onOpen, onRightClick, onItemDrop, onFolderDragStart }) {
+  const [isDragOver, setIsDragOver] = useState(false)
   const lang = useLangCode()
   const [count,   setCount]   = useState(null)
   const [preview, setPreview] = useState([])
@@ -105,7 +110,7 @@ const FolderCard = memo(function FolderCard({ folder, size, onOpen, onRightClick
   return (
     <div
       ref={containerRef}
-      className={styles.folderCard}
+      className={`${styles.folderCard} ${isDragOver ? styles.folderDropTarget : ''}`}
       style={{ width: size, height: size }}
       onClick={onOpen}
       onMouseMove={onMouseMove}
@@ -113,6 +118,22 @@ const FolderCard = memo(function FolderCard({ folder, size, onOpen, onRightClick
       onMouseLeave={onMouseLeave}
       title={folder.path}
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onRightClick?.(e, folder) }}
+      draggable
+      onDragStart={e => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', 'lumina-drag')
+        _dragItems = [{ src: folder.path, isDir: true }]
+        onFolderDragStart?.([{ src: folder.path, isDir: true }])
+      }}
+      onDragEnd={() => { _dragItems = [] }}
+      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setIsDragOver(true) }}
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setIsDragOver(false) }}
+      onDrop={e => {
+        e.preventDefault(); e.stopPropagation(); setIsDragOver(false)
+        const items = _dragItems.filter(it => it.src !== folder.path)
+        if (items.length > 0) onItemDrop?.(items, folder.path)
+        _dragItems = []
+      }}
     >
       <div ref={deckRef} className={styles.deck} style={{ width: thumbW, height: thumbH }}>
         {loading ? (
@@ -322,7 +343,7 @@ function startPreview(url, mx, my) {
 }
 
 // ── Image card ──
-const ImageCard = memo(function ImageCard({ img, index, size, onSelect, onRightClick, imgTags, isSelected, onToggleSelect }) {
+const ImageCard = memo(function ImageCard({ img, index, size, onSelect, onRightClick, imgTags, isSelected, selected, onToggleSelect, onImageDragStart, label }) {
   const imgRef   = useRef(null)
   const videoRef = useRef(null)
   const cardRef  = useRef(null)
@@ -385,6 +406,64 @@ const ImageCard = memo(function ImageCard({ img, index, size, onSelect, onRightC
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       title={img.name}
+      draggable
+      onDragStart={e => {
+        cancelPreview()
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', 'lumina-drag')
+        onImageDragStart?.(img.path)
+
+        // Custom ghost for multi-select drag
+        if (isSelected && selected && selected.size >= 2) {
+          const ghost = document.createElement('div')
+          ghost.style.cssText = `
+            position: fixed; top: -9999px; left: -9999px;
+            width: 140px; height: 105px; pointer-events: none;
+          `
+          const rotations = [-4, 2.5, -1.5, 3.5]
+          const count = Math.min(selected.size, 4)
+          // Back cards (shadow layers)
+          rotations.slice(0, count).forEach((rot, idx) => {
+            if (idx === 0) return
+            const card = document.createElement('div')
+            card.style.cssText = `
+              position: absolute; inset: 4px;
+              background: rgba(40,40,60,0.7);
+              border-radius: 8px;
+              transform: rotate(${rot}deg);
+              box-shadow: 0 2px 14px rgba(0,0,0,0.5);
+              border: 1.5px solid rgba(255,255,255,0.15);
+            `
+            ghost.appendChild(card)
+          })
+          // Top card with actual image
+          const topCard = document.createElement('div')
+          topCard.style.cssText = `
+            position: absolute; inset: 4px;
+            background: url(${img.url}) center/cover no-repeat;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            border: 2px solid rgba(255,255,255,0.35);
+          `
+          ghost.appendChild(topCard)
+          // Badge
+          const badge = document.createElement('div')
+          badge.style.cssText = `
+            position: absolute; top: 6px; right: 6px;
+            background: rgba(var(--accent-rgb, 110, 86, 207), 0.9);
+            color: white; font-size: 11px; font-weight: 700;
+            border-radius: 10px; padding: 1px 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            font-family: -apple-system, sans-serif;
+          `
+          badge.textContent = `${selected.size}`
+          ghost.appendChild(badge)
+          document.body.appendChild(ghost)
+          e.dataTransfer.setDragImage(ghost, 70, 52)
+          setTimeout(() => { if (ghost.parentNode) document.body.removeChild(ghost) }, 100)
+        }
+      }}
+      onDragEnd={() => { _dragItems = [] }}
     >
       {/* Checkbox */}
       <div
@@ -393,6 +472,10 @@ const ImageCard = memo(function ImageCard({ img, index, size, onSelect, onRightC
       >
         {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
       </div>
+      {/* Color label dot */}
+      {label && LABEL_COLORS[label] && (
+        <div className={styles.labelDot} style={{ background: LABEL_COLORS[label].dot }} />
+      )}
 
       <div className={styles.imgWrap}>
         {img.isVideo ? (
@@ -536,7 +619,7 @@ function BulkExportPanel({ images, selected, edits, onClose, onDone }) {
 }
 
 // ── List Row ──
-const ListRow = memo(function ListRow({ img, index, onSelect, onRightClick, isSelected, onToggleSelect, imgTags }) {
+const ListRow = memo(function ListRow({ img, index, onSelect, onRightClick, isSelected, onToggleSelect, imgTags, label }) {
   const t = useLang()
   const handleClick = useCallback((e) => {
     cancelPreview()
@@ -557,6 +640,9 @@ const ListRow = memo(function ListRow({ img, index, onSelect, onRightClick, isSe
       >
         {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
       </div>
+      {label && LABEL_COLORS[label] && (
+        <div className={styles.listLabelDot} style={{ background: LABEL_COLORS[label].dot }} />
+      )}
       <div className={styles.listThumb}>
         {img.isVideo
           ? <video src={img.url} className={styles.listThumbImg} preload="metadata" muted playsInline />
@@ -607,7 +693,7 @@ function buildVirtualRows(hasFolders, subfolders, hasImages, images, cols, size,
   return rows
 }
 
-export default function Gallery({ images, subfolders, showSubfolders, loading, gridSize, onSelect, onOpenFolder, tags, onAddToAlbum, selected, onToggleSelect, onClearSelect, onAfterDelete, edits, albumView, onRemoveFromAlbum, viewMode = 'grid', onSelectAll, onTrashFiles = null }) {
+export default function Gallery({ images, subfolders, showSubfolders, loading, gridSize, onSelect, onOpenFolder, tags, onAddToAlbum, selected, onToggleSelect, onClearSelect, onAfterDelete, edits, albumView, onRemoveFromAlbum, viewMode = 'grid', onSelectAll, onTrashFiles = null, onMoveItems = null, onCreateFolder = null, onRenameFolder = null, onDeleteFolder = null, labels = {}, onSetLabel, onBatchRename, onSlideshow, onCollage, onApplyPreset }) {
   const t    = useLang()
   const lang = useLangCode()
   const size = GRID_SIZES[gridSize]
@@ -626,6 +712,35 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
   const handleFolderRightClick = useCallback((e, folder) => {
     setCtxMenu({ x: e.clientX, y: e.clientY, folder })
   }, [])
+
+  // ── Drag handlers ──
+  const handleImageDragStart = useCallback((draggedPath) => {
+    const inSel = selected?.has(draggedPath) && (selected?.size ?? 0) > 1
+    _dragItems = inSel
+      ? images.filter(img => selected.has(img.path)).map(img => ({ src: img.path, isDir: false }))
+      : [{ src: draggedPath, isDir: false }]
+  }, [selected, images])
+
+  const handleItemDrop = useCallback((items, destPath) => {
+    if (onMoveItems && items.length > 0) onMoveItems(items, destPath)
+  }, [onMoveItems])
+
+  const handleMoveImageViaDialog = useCallback(async (imagePath) => {
+    const dest = await window.api.selectFolder()
+    if (dest) onMoveItems?.([{ src: imagePath, isDir: false }], dest)
+  }, [onMoveItems])
+
+  const handleMoveSelectedViaDialog = useCallback(async () => {
+    const dest = await window.api.selectFolder()
+    if (!dest || !selected?.size) return
+    const items = images.filter(img => selected.has(img.path)).map(img => ({ src: img.path, isDir: false }))
+    onMoveItems?.(items, dest)
+  }, [onMoveItems, selected, images])
+
+  const handleMoveFolderViaDialog = useCallback(async (folderPath) => {
+    const dest = await window.api.selectFolder()
+    if (dest) onMoveItems?.([{ src: folderPath, isDir: true }], dest)
+  }, [onMoveItems])
 
   const closeCtx = useCallback(() => setCtxMenu(null), [])
 
@@ -681,7 +796,9 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
         {row.type === 'folders' && row.items.map(sf => (
           <FolderCard key={sf.path} folder={sf} size={size}
             onOpen={() => onOpenFolder(sf.path)}
-            onRightClick={handleFolderRightClick} />
+            onRightClick={handleFolderRightClick}
+            onItemDrop={handleItemDrop}
+            onFolderDragStart={() => {}} />
         ))}
         {row.type === 'images' && row.items.map((img, j) => (
           <ImageCard key={img.path} img={img} index={row.startIndex + j} size={size}
@@ -689,12 +806,15 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
             onRightClick={handleRightClick}
             imgTags={tags?.[img.path] ?? []}
             isSelected={selected?.has(img.path) ?? false}
-            onToggleSelect={onToggleSelect ?? (() => {})} />
+            selected={selected}
+            onToggleSelect={onToggleSelect ?? (() => {})}
+            onImageDragStart={handleImageDragStart}
+            label={labels?.[img.path] ?? null} />
         ))}
       </div>
     )
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [virtualRows, size, selected, tags])
+  }, [virtualRows, size, selected, tags, handleItemDrop, handleImageDragStart])
 
   const selectedSize = images.filter(img => selected?.has(img.path)).reduce((s, img) => s + img.size, 0)
 
@@ -720,6 +840,9 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
             <div key={sf.path} className={styles.listFolderRow}
               onClick={() => onOpenFolder(sf.path)}
               onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleFolderRightClick(e, sf) }}
+              draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain','lumina-drag'); _dragItems=[{src:sf.path,isDir:true}] }}
+              onDragEnd={() => { _dragItems=[] }}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{flexShrink:0,color:'rgba(255,255,255,0.5)'}}>
                 <path d="M1 3.5A1.5 1.5 0 012.5 2h3.086a1.5 1.5 0 011.06.44L7.72 3.5H13.5A1.5 1.5 0 0115 5v7a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5V3.5z" fill="currentColor" fillOpacity="0.55"/>
@@ -738,6 +861,7 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
               isSelected={selected?.has(img.path) ?? false}
               onToggleSelect={onToggleSelect ?? (() => {})}
               imgTags={tags?.[img.path] ?? []}
+              label={labels?.[img.path] ?? null}
             />
           ))}
         </div>
@@ -778,6 +902,40 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
             {selectedCount(selected.size, lang)} · {formatSize(selectedSize)}
           </div>
           <div className={styles.selSep} />
+          {onSlideshow && (
+            <button className={styles.selMoveBtn} onClick={onSlideshow} title={t('slideshowStart')}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M6.5 5.5l5 2.5-5 2.5V5.5z" fill="currentColor"/>
+              </svg>
+            </button>
+          )}
+          {onBatchRename && (
+            <button className={styles.selMoveBtn} onClick={onBatchRename} title={t('batchRename')}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M2 13h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M9.5 3.5L12 6 6 12H3.5V9.5L9.5 3.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+          {onCollage && selected?.size >= 2 && (
+            <button className={styles.selMoveBtn} onClick={onCollage} title={t('collageTitle')}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <rect x="1.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="8.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="1.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="8.5" y="8.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+              </svg>
+            </button>
+          )}
+          {onMoveItems && (
+            <button className={styles.selMoveBtn} onClick={handleMoveSelectedViaDialog} title={t('moveTo')}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M2 8h10M9 5l3 3-3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M13 3v10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.5"/>
+              </svg>
+            </button>
+          )}
           <button className={styles.selDeleteBtn} onClick={handleDeleteSelected} title={onTrashFiles ? t('moveToTrash') : t('deleteSelected')}>
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <path d="M2 3.5h10M5 3.5V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1M12 3.5L11 12a1 1 0 01-1 1H4a1 1 0 01-1-1L2 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -813,6 +971,15 @@ export default function Gallery({ images, subfolders, showSubfolders, loading, g
           hasSelection={selected?.size ?? 0}
           onExportSelected={selected?.size > 0 ? () => { setShowBulkExport(true); closeCtx() } : null}
           onTrashFile={onTrashFiles && ctxMenu?.image ? () => { onTrashFiles([ctxMenu.image.path]); closeCtx() } : null}
+          onMoveImage={onMoveItems && ctxMenu?.image ? () => handleMoveImageViaDialog(ctxMenu.image.path) : null}
+          onMoveSelected={onMoveItems && (selected?.size ?? 0) > 1 ? handleMoveSelectedViaDialog : null}
+          onNewFolder={onCreateFolder ? () => { onCreateFolder(); closeCtx() } : null}
+          onRenameFolder={onRenameFolder && ctxMenu?.folder ? () => { onRenameFolder(ctxMenu.folder); closeCtx() } : null}
+          onDeleteFolder={onDeleteFolder && ctxMenu?.folder ? () => { onDeleteFolder(ctxMenu.folder.path); closeCtx() } : null}
+          onMoveFolder={onMoveItems && ctxMenu?.folder ? () => handleMoveFolderViaDialog(ctxMenu.folder.path) : null}
+          currentLabel={ctxMenu?.image ? (labels?.[ctxMenu.image.path] ?? null) : null}
+          onSetLabel={onSetLabel && ctxMenu?.image ? (color) => { onSetLabel(ctxMenu.image.path, color); closeCtx() } : null}
+          onApplyPreset={onApplyPreset && ctxMenu?.image ? (presetId) => { onApplyPreset(ctxMenu.image.path, presetId); closeCtx() } : null}
         />
       )}
     </>

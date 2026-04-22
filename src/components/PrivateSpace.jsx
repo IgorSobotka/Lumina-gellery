@@ -176,6 +176,7 @@ function LockScreen({ onUnlocked }) {
 
 // ── Folder card ──
 function FolderCard({ name, count, onOpen, onRename, onDelete }) {
+  const t = useLang()
   const [menu, setMenu] = useState(false)
   const menuRef = useRef(null)
 
@@ -194,12 +195,12 @@ function FolderCard({ name, count, onOpen, onRename, onDelete }) {
       <button
         className={styles.folderCardMenu}
         onClick={e => { e.stopPropagation(); setMenu(v => !v) }}
-        title="Opcje"
+        title={t('pvOptions')}
       >⋯</button>
       {menu && (
         <div ref={menuRef} className={styles.folderMenu}>
-          <button onClick={() => { setMenu(false); onRename(name) }}>Zmień nazwę</button>
-          <button onClick={() => { setMenu(false); onDelete(name) }}>Usuń folder</button>
+          <button onClick={() => { setMenu(false); onRename(name) }}>{t('pvRename')}</button>
+          <button onClick={() => { setMenu(false); onDelete(name) }}>{t('pvDeleteFolder')}</button>
         </div>
       )}
     </div>
@@ -208,6 +209,7 @@ function FolderCard({ name, count, onOpen, onRename, onDelete }) {
 
 // ── Private gallery card ──
 function PrivateCard({ file, onSelect, onRemove, onMove, folders }) {
+  const t = useLang()
   const [thumb, setThumb] = useState(null)
   const [menu, setMenu] = useState(false)
   const cardRef = useRef(null)
@@ -242,22 +244,22 @@ function PrivateCard({ file, onSelect, onRemove, onMove, folders }) {
       <button
         className={styles.pvCardMenuBtn}
         onClick={e => { e.stopPropagation(); setMenu(v => !v) }}
-        title="Opcje"
+        title={t('pvOptions')}
       >⋯</button>
       {menu && (
         <div ref={menuRef} className={styles.pvCardMenu} onClick={e => e.stopPropagation()}>
           {folders.length > 0 && (
             <div className={styles.pvCardMenuSub}>
-              <div className={styles.pvCardMenuLabel}>Przenieś do</div>
+              <div className={styles.pvCardMenuLabel}>{t('pvMoveTo')}</div>
               {file.folder && (
-                <button onClick={() => { setMenu(false); onMove(file.name, null) }}>/ (główny)</button>
+                <button onClick={() => { setMenu(false); onMove(file.name, null) }}>{t('pvMoveToRoot')}</button>
               )}
               {folders.filter(f => f !== file.folder).map(f => (
                 <button key={f} onClick={() => { setMenu(false); onMove(file.name, f) }}>{f}</button>
               ))}
             </div>
           )}
-          <button onClick={e => { e.stopPropagation(); setMenu(false); onRemove(file.name) }}>Usuń</button>
+          <button onClick={e => { e.stopPropagation(); setMenu(false); onRemove(file.name) }}>{t('pvRemove')}</button>
         </div>
       )}
     </div>
@@ -291,11 +293,12 @@ function PrivateLightbox({ file, onClose }) {
 
 // ── Rename dialog ──
 function RenameDialog({ initial, onConfirm, onCancel }) {
+  const t = useLang()
   const [val, setVal] = useState(initial)
   return (
     <div className={styles.dialogOverlay} onClick={onCancel}>
       <div className={styles.dialogBox} onClick={e => e.stopPropagation()}>
-        <div className={styles.dialogTitle}>Zmień nazwę folderu</div>
+        <div className={styles.dialogTitle}>{t('pvRenameFolder')}</div>
         <input
           autoFocus
           className={styles.dialogInput}
@@ -305,7 +308,7 @@ function RenameDialog({ initial, onConfirm, onCancel }) {
           maxLength={48}
         />
         <div className={styles.dialogBtns}>
-          <button className={styles.dialogCancel} onClick={onCancel}>Anuluj</button>
+          <button className={styles.dialogCancel} onClick={onCancel}>{t('pvCancel')}</button>
           <button className={styles.dialogOk} onClick={() => onConfirm(val.trim())} disabled={!val.trim()}>OK</button>
         </div>
       </div>

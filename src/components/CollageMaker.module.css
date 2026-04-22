@@ -1,0 +1,140 @@
+.overlay {
+  position: fixed; inset: 0; z-index: 10500;
+  background: rgba(0,0,0,0.70);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 160ms ease;
+}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+.panel {
+  display: flex; gap: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  animation: slideUp 200ms cubic-bezier(0.34,1.30,0.64,1);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 32px 100px rgba(0,0,0,0.70);
+  max-width: 96vw; max-height: 92vh;
+}
+@keyframes slideUp { from { opacity:0; transform:scale(0.95) } to { opacity:1; transform:scale(1) } }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 230px; flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 20px 18px;
+  overflow-y: auto;
+
+  backdrop-filter: blur(32px) saturate(180%) brightness(1.14);
+  -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(1.14);
+  background: rgba(255,255,255,0.08);
+  border-right: 1px solid rgba(255,255,255,0.12);
+}
+
+.sideTitle {
+  font-size: 14px; font-weight: 700; color: var(--text-1);
+}
+
+.section { display: flex; flex-direction: column; gap: 8px; }
+.sectionLabel {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--text-3);
+}
+
+/* Layout grid */
+.layoutGrid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+}
+.layoutBtn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 4px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  transition: all var(--transition);
+}
+.layoutBtn:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.20); }
+.layoutBtnActive {
+  background: rgba(var(--accent-rgb),0.22) !important;
+  border-color: rgba(var(--accent-rgb),0.55) !important;
+}
+.layoutLabel { font-size: 8px; color: var(--text-3); font-weight: 600; }
+
+/* Gap slider */
+.slider {
+  width: 100%; accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Background */
+.bgRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bgBtn {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid transparent;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.bgBtn:hover { transform: scale(1.2); }
+.bgBtnActive { border-color: white !important; }
+.colorPicker {
+  width: 22px; height: 22px; border-radius: 50%; border: none; padding: 0;
+  cursor: pointer; background: none;
+}
+
+/* Buttons */
+.exportBtn {
+  padding: 9px 14px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 700; color: white;
+  background: rgba(var(--accent-rgb),0.75);
+  border: 1px solid rgba(var(--accent-rgb),0.50);
+  transition: background var(--transition);
+  margin-top: auto;
+}
+.exportBtn:hover:not(:disabled) { background: rgba(var(--accent-rgb),0.90); }
+.exportBtn:disabled { opacity: 0.5; cursor: default; }
+
+.closeBtn {
+  padding: 7px 14px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600; color: var(--text-2);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: all var(--transition);
+}
+.closeBtn:hover { background: rgba(255,255,255,0.13); color: var(--text-1); }
+
+/* ── Canvas area ── */
+.canvasWrap {
+  flex: 1; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  background: #111;
+  min-width: 0;
+}
+
+.canvas {
+  max-width: 100%; max-height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+/* Slot overlay */
+.slotOverlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+
+.slotBtn {
+  position: absolute; pointer-events: all;
+  background: transparent;
+  border: 2px solid transparent;
+  transition: border-color var(--transition), background var(--transition);
+  display: flex; align-items: center; justify-content: center;
+}
+.slotBtn:hover {
+  border-color: rgba(255,255,255,0.40);
+  background: rgba(255,255,255,0.06);
+}
+
+.slotCycleHint {
+  font-size: 22px; color: rgba(255,255,255,0.70);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.slotBtn:hover .slotCycleHint { opacity: 1; }

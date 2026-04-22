@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import AppearancePanel from './panels/AppearancePanel'
 import GeneralPanel from './panels/GeneralPanel'
+import AddonsPanel from './panels/AddonsPanel'
 import { useLang } from '../../i18n/index'
 import styles from './Settings.module.css'
 
@@ -40,6 +41,18 @@ function buildCategories(t) {
       disabled: true,
     },
     {
+      id: 'addons',
+      label: t('addons'),
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+          <rect x="9" y="1.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+          <rect x="1.5" y="9" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M11.75 9v5.5M9 11.75h5.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
       id: 'about',
       label: t('about'),
       icon: (
@@ -54,7 +67,7 @@ function buildCategories(t) {
   ]
 }
 
-export default function Settings({ settings, onSettingsChange, onClose }) {
+export default function Settings({ settings, onSettingsChange, addons, onAddonsChange, onClose }) {
   const t = useLang()
   const [activeId, setActiveId] = useState('appearance')
   const overlayRef = useRef(null)
@@ -89,6 +102,9 @@ export default function Settings({ settings, onSettingsChange, onClose }) {
               {cat.disabled && <span className={styles.soon}>{t('soon')}</span>}
             </button>
           ))}
+          <div className={styles.navFooter}>
+            <span className={styles.navVersion}>Lumina v1.0</span>
+          </div>
         </nav>
 
         {/* ── Content ── */}
@@ -110,6 +126,9 @@ export default function Settings({ settings, onSettingsChange, onClose }) {
             )}
             {activeId === 'general' && (
               <GeneralPanel settings={settings} onSettingsChange={onSettingsChange} />
+            )}
+            {activeId === 'addons' && (
+              <AddonsPanel addons={addons} onAddonsChange={onAddonsChange} />
             )}
           </div>
         </div>

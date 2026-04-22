@@ -16,9 +16,19 @@ import {
 import AlbumPicker from './components/AlbumPicker'
 import TrashView from './components/TrashView'
 import PrivateSpace from './components/PrivateSpace'
+import DiskManager from './components/DiskManager'
 import { loadTrash, saveTrash } from './utils/trash'
 import { LangContext } from './i18n/index'
 import { applyAccent } from './utils/accent'
+import LightPillar from './components/LightPillar'
+import CloudBrowser from './components/CloudBrowser'
+import NameDialog from './components/NameDialog'
+import BatchRenameDialog from './components/BatchRenameDialog'
+import Slideshow from './components/Slideshow'
+import CollageMaker from './components/CollageMaker'
+import { loadAddons, saveAddons } from './utils/addons-state'
+import { loadLabels, saveLabels } from './utils/labels'
+import { EDITOR_PRESETS } from './utils/presets'
 import styles from './App.module.css'
 
 const RECENT_KEY     = 'lumina_recent_folders'
@@ -30,8 +40,8 @@ function loadRecent() {
 }
 
 function loadSettings() {
-  try { return { wallpaper: DEFAULT_WALLPAPER, language: 'pl', ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') } }
-  catch { return { wallpaper: DEFAULT_WALLPAPER, language: 'pl' } }
+  try { return { wallpaper: DEFAULT_WALLPAPER, language: 'en', ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') } }
+  catch { return { wallpaper: DEFAULT_WALLPAPER, language: 'en' } }
 }
 
 function saveSettings(s) {
@@ -77,6 +87,18 @@ export default function App() {
   const [trash,      setTrash]      = useState(loadTrash)
   const [trashView,   setTrashView]   = useState(false)
   const [privateView, setPrivateView] = useState(false)
+  const [diskView,    setDiskView]    = useState(false)
+  const [addons,      setAddons]      = useState(loadAddons)
+  const [cloudProvider, setCloudProvider] = useState(null) // null or provider id string
+  // null | { mode:'create', parentPath } | { mode:'rename', src, currentName, isDir }
+  const [nameDialog,  setNameDialog]  = useState(null)
+  const [nameDialogError, setNameDialogError] = useState(null)
+  const [labels,      setLabels]      = useState(loadLabels)
+  const [labelFilter, setLabelFilter] = useState(null)
+  const [smartFilter, setSmartFilter] = useState({ orientation: null, type: null, sizeRange: null, dateRange: null })
+  const [slideshow,   setSlideshow]   = useState(false)
+  const [batchRenameOpen, setBatchRenameOpen] = useState(false)
+  const [collageOpen, setCollageOpen] = useState(false)
 
   // Ref so callbacks always read the latest folder without re-creating
   const folderRef = useRef(null)
@@ -85,6 +107,15 @@ export default function App() {
     applyAccent(next.accentColor, next.accentCustom)
     setSettings(next)
     saveSettings(next)
+  }, [])
+
+  const handleAddonsChange = useCallback((next) => {
+    setAddons(next)
+    saveAddons(next)
+    // Sync tokens to main process
+    Object.entries(next).forEach(([id, data]) => {
+      window.api.cloudSetToken?.(id, data?.token ?? null)
+    })
   }, [])
 
   // Pure data loader — does NOT touch history stacks
@@ -111,12 +142,78 @@ export default function App() {
     })
   }, [])
 
+  // ── Folder management ─────────────────────────────────────────────────────
+  const handleCreateFolder = useCallback(() => {
+    if (!folder) return
+    setNameDialogError(null)
+    setNameDialog({ mode: 'create', parentPath: folder })
+  }, [folder])
+
+  const handleCreateFolderConfirm = useCallback(async (name) => {
+    if (!nameDialog?.parentPath) return
+    const res = await window.api.createFolder(nameDialog.parentPath, name)
+    if (res.success) {
+      setNameDialog(null)
+      if (folderRef.current) loadFolder(folderRef.current)
+    } else {
+      setNameDialogError(res.error === 'exists' ? null : res.error)
+      if (res.error === 'exists') setNameDialogError('A folder with this name already exists.')
+    }
+  }, [nameDialog, loadFolder])
+
+  const handleRenameFolder = useCallback((folderObj) => {
+    setNameDialogError(null)
+    setNameDialog({ mode: 'rename', src: folderObj.path, currentName: folderObj.name, isDir: true })
+  }, [])
+
+  const handleRenameConfirm = useCallback(async (newName) => {
+    if (!nameDialog?.src) return
+    const res = await window.api.renameItem(nameDialog.src, newName)
+    if (res.success) {
+      setNameDialog(null)
+      if (folderRef.current) loadFolder(folderRef.current)
+    } else {
+      setNameDialogError(res.error === 'exists' ? 'A file or folder with this name already exists.' : res.error)
+    }
+  }, [nameDialog, loadFolder])
+
+  const handleDeleteFolder = useCallback(async (folderPath) => {
+    const res = await window.api.trashFolder(folderPath)
+    if (res.success && folderRef.current) loadFolder(folderRef.current)
+  }, [loadFolder])
+
+  const handleMoveItems = useCallback(async (items, destPath) => {
+    const res = await window.api.moveItems(items, destPath)
+    setSelected(new Set())
+    if (folderRef.current) loadFolder(folderRef.current)
+    // if moved into a subfolder that's currently shown, reload won't show it — that's fine
+  }, [loadFolder])
+
+  const handleSetLabel = useCallback((imagePath, color) => {
+    setLabels(prev => {
+      const next = { ...prev }
+      if (color === null) { delete next[imagePath] }
+      else { next[imagePath] = color }
+      saveLabels(next)
+      return next
+    })
+  }, [])
+
+  // On mount: restore cloud tokens to main process
+  useEffect(() => {
+    Object.entries(addons).forEach(([id, data]) => {
+      if (data?.token) window.api.cloudSetToken?.(id, data.token)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Normal navigation — pushes to back stack, clears forward stack
   const openFolder = useCallback(async (path) => {
     if (!path) return
     setAlbumView(null)
     setTrashView(false)
     setPrivateView(false)
+    setDiskView(false)
     const cur = folderRef.current
     if (cur) setNavHistory(h => [...h, cur])
     setNavFuture([])
@@ -152,6 +249,12 @@ export default function App() {
       return next
     })
   }, [])
+
+  const applyPreset = useCallback((imagePath, presetId) => {
+    const preset = EDITOR_PRESETS.find(p => p.id === presetId)
+    if (!preset || !imagePath) return
+    setImageEdit(imagePath, preset.edit)
+  }, [setImageEdit])
 
   const setImageTags = useCallback((imagePath, newTags) => {
     setTags(prev => {
@@ -275,6 +378,28 @@ export default function App() {
           const imgTags = tags[img.path] ?? []
           if (!tagFilter.every(t => imgTags.includes(t))) return false
         }
+        if (labelFilter && labels[img.path] !== labelFilter) return false
+        // Smart filter - orientation
+        if (smartFilter.orientation) {
+          const w = img.width ?? 0, h = img.height ?? 0
+          if (smartFilter.orientation === 'landscape' && !(w > h)) return false
+          if (smartFilter.orientation === 'portrait'  && !(h > w)) return false
+          if (smartFilter.orientation === 'square'    && !(Math.abs(w - h) <= Math.max(w, h) * 0.1)) return false
+        }
+        // Smart filter - type
+        if (smartFilter.type === 'photos' && img.isVideo) return false
+        if (smartFilter.type === 'videos' && !img.isVideo) return false
+        // Smart filter - size
+        const SR = { tiny: [0, 500*1024], small: [500*1024, 2*1024*1024], medium: [2*1024*1024, 10*1024*1024], large: [10*1024*1024, Infinity] }
+        if (smartFilter.sizeRange && SR[smartFilter.sizeRange]) {
+          const [lo, hi] = SR[smartFilter.sizeRange]
+          if (img.size < lo || img.size >= hi) return false
+        }
+        // Smart filter - date
+        const DR = { today: 86400000, thisweek: 7*86400000, thismonth: 30*86400000, thisyear: 365*86400000 }
+        if (smartFilter.dateRange && DR[smartFilter.dateRange]) {
+          if (Date.now() - img.mtime > DR[smartFilter.dateRange]) return false
+        }
         return true
       })
       .sort((a, b) => {
@@ -284,7 +409,7 @@ export default function App() {
         if (sortBy === 'type') return (a.isVideo === b.isVideo) ? a.name.localeCompare(b.name) : (a.isVideo ? 1 : -1)
         return 0
       }),
-    [images, search, sortBy, tags, tagFilter]
+    [images, search, sortBy, tags, tagFilter, labelFilter, labels, smartFilter]
   )
 
   const availableTags = useMemo(() => getAllTags(tags), [tags])
@@ -345,25 +470,46 @@ export default function App() {
 
   const isCustom = settings.wallpaper === 'custom' && settings.customWallpaperPath
   const blurPx   = settings.wallpaperBlur ?? 0
+  const activeWp = WALLPAPERS[settings.wallpaper] ?? WALLPAPERS[DEFAULT_WALLPAPER]
+  const isPillar  = activeWp?.type === 'pillar'
 
-  const bgStyle = isCustom
-    ? {
-        backgroundImage: `url("gallery://img?p=${encodeURIComponent(settings.customWallpaperPath)}")`,
-        filter: blurPx > 0 ? `blur(${blurPx}px)` : undefined,
-      }
-    : {
-        background: (WALLPAPERS[settings.wallpaper]?.background ?? WALLPAPERS[DEFAULT_WALLPAPER].background)
-          .replace(/\s+/g, ' ').trim(),
-        filter: blurPx > 0 ? `blur(${blurPx}px)` : undefined,
-      }
+  const bgStyle = isPillar
+    ? undefined
+    : isCustom
+      ? {
+          backgroundImage: `url("gallery://img?p=${encodeURIComponent(settings.customWallpaperPath)}")`,
+          filter: blurPx > 0 ? `blur(${blurPx}px)` : undefined,
+        }
+      : {
+          background: (activeWp.background ?? WALLPAPERS[DEFAULT_WALLPAPER].background)
+            .replace(/\s+/g, ' ').trim(),
+          filter: blurPx > 0 ? `blur(${blurPx}px)` : undefined,
+        }
 
   const isVibrancy = window.api?.platform === 'darwin'
 
   return (
-    <LangContext.Provider value={settings.language ?? 'pl'}>
+    <LangContext.Provider value={settings.language ?? 'en'}>
     <div className={`${styles.app}${isVibrancy ? ' ' + styles.vibrancy : ''}`}>
 
-      {!isVibrancy && <div className={styles.bg} style={bgStyle} />}
+      {!isVibrancy && !isPillar && <div className={styles.bg} style={bgStyle} />}
+      {!isVibrancy && isPillar && (
+        <>
+          <div className={styles.pillarBg}>
+            <LightPillar
+              topColor={activeWp.topColor}
+              bottomColor={activeWp.bottomColor}
+              pillarWidth={activeWp.pillarWidth ?? 3.0}
+              glowAmount={activeWp.glowAmount ?? 0.005}
+              intensity={1.0}
+              rotationSpeed={0.3}
+              mixBlendMode="normal"
+              quality="high"
+            />
+          </div>
+          <div className={styles.pillarVeil} />
+        </>
+      )}
       <TitleBar folder={folder} />
       <div className={styles.body}>
         <Sidebar
@@ -382,12 +528,17 @@ export default function App() {
           onDeleteAlbum={handleDeleteAlbum}
           onCreateAlbum={handleCreateAlbum}
           trashCount={trash.length}
-          onOpenTrash={() => { setTrashView(true); setPrivateView(false); setAlbumView(null); setFolder(null) }}
-          onOpenPrivate={() => { setPrivateView(true); setTrashView(false); setAlbumView(null) }}
+          onOpenTrash={() => { setTrashView(true); setPrivateView(false); setDiskView(false); setAlbumView(null); setFolder(null) }}
+          onOpenPrivate={() => { setPrivateView(true); setTrashView(false); setDiskView(false); setAlbumView(null) }}
+          onOpenDisk={() => { setDiskView(true); setTrashView(false); setPrivateView(false); setAlbumView(null) }}
+          addons={addons}
+          onOpenCloud={(provider) => setCloudProvider(provider)}
         />
         <div className={styles.main}>
           {privateView ? (
             <PrivateSpace />
+          ) : diskView ? (
+            <DiskManager folder={folder} />
           ) : trashView ? (
             <TrashView
               items={trash}
@@ -415,6 +566,11 @@ export default function App() {
                 onTagFilter={setTagFilter}
                 viewMode={viewMode}
                 onViewMode={setViewMode}
+                labelFilter={labelFilter}
+                onLabelFilter={setLabelFilter}
+                onSlideshow={filteredImages.length > 0 ? () => setSlideshow(true) : null}
+                smartFilter={smartFilter}
+                onSmartFilter={setSmartFilter}
               />
               <Gallery
                 images={filteredImages}
@@ -440,6 +596,16 @@ export default function App() {
                 viewMode={viewMode}
                 onSelectAll={selectAll}
                 onTrashFiles={handleTrashFiles}
+                onMoveItems={!albumView ? handleMoveItems : null}
+                onCreateFolder={!albumView && folder ? handleCreateFolder : null}
+                onRenameFolder={!albumView ? handleRenameFolder : null}
+                onDeleteFolder={!albumView ? handleDeleteFolder : null}
+                labels={labels}
+                onSetLabel={handleSetLabel}
+                onBatchRename={selected.size > 0 ? () => setBatchRenameOpen(true) : null}
+                onSlideshow={filteredImages.length > 0 ? () => setSlideshow(true) : null}
+                onCollage={selected.size >= 2 ? () => setCollageOpen(true) : null}
+                onApplyPreset={applyPreset}
               />
             </>
           ) : (
@@ -453,7 +619,50 @@ export default function App() {
         <Settings
           settings={settings}
           onSettingsChange={handleSettingsChange}
+          addons={addons}
+          onAddonsChange={handleAddonsChange}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      {cloudProvider && addons[cloudProvider] && (
+        <CloudBrowser
+          provider={cloudProvider}
+          addonState={addons[cloudProvider]}
+          onClose={() => setCloudProvider(null)}
+        />
+      )}
+
+      {nameDialog && (
+        <NameDialog
+          mode={nameDialog.mode}
+          initialValue={nameDialog.mode === 'rename' ? nameDialog.currentName : ''}
+          onConfirm={nameDialog.mode === 'create' ? handleCreateFolderConfirm : handleRenameConfirm}
+          onClose={() => { setNameDialog(null); setNameDialogError(null) }}
+          error={nameDialogError}
+        />
+      )}
+
+      {collageOpen && selected.size >= 2 && (
+        <CollageMaker
+          images={filteredImages.filter(img => selected.has(img.path) && !img.isVideo)}
+          onClose={() => setCollageOpen(false)}
+        />
+      )}
+
+      {slideshow && filteredImages.length > 0 && (
+        <Slideshow
+          images={filteredImages.filter(img => !img.isVideo)}
+          startIndex={0}
+          onClose={() => setSlideshow(false)}
+        />
+      )}
+
+      {batchRenameOpen && selected.size > 0 && (
+        <BatchRenameDialog
+          images={filteredImages.filter(img => selected.has(img.path))}
+          onClose={() => setBatchRenameOpen(false)}
+          onDone={() => { setBatchRenameOpen(false); setSelected(new Set()); if (folder) loadFolder(folder) }}
         />
       )}
 

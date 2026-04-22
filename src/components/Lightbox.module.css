@@ -264,6 +264,43 @@
 .epMsgErr { color: #ff6b62 !important; }
 .epHint { font-size: 10px; color: var(--text-3); font-style: italic; text-align: center; padding: 8px 14px; }
 
+/* Resize section */
+.epResizeRow { display: flex; flex-wrap: wrap; gap: 4px; }
+.epResizeBtn {
+  padding: 4px 9px; border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 600; color: var(--text-2);
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  transition: all var(--transition); cursor: pointer;
+}
+.epResizeBtn:hover { background: rgba(255,255,255,0.13); color: var(--text-1); }
+.epResizeActive {
+  background: rgba(var(--accent-rgb),0.22) !important;
+  border-color: rgba(var(--accent-rgb),0.42) !important;
+  color: var(--accent-text) !important;
+}
+.epCustomRow {
+  display: flex; align-items: center; gap: 6px; margin-top: 8px;
+}
+.epCustomLabel { font-size: 10px; color: var(--text-3); }
+.epCustomInput {
+  width: 70px; padding: 4px 7px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16);
+  color: var(--text-1); font-size: 11px; font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.epCustomInput:focus { border-color: rgba(var(--accent-rgb),0.55); }
+/* Remove number input spinners */
+.epCustomInput::-webkit-outer-spin-button,
+.epCustomInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.epCustomInput[type=number] { -moz-appearance: textfield; }
+.epDims {
+  margin-top: 7px; font-size: 9px; font-weight: 600;
+  color: var(--accent-text); letter-spacing: 0.05em;
+  background: rgba(var(--accent-rgb),0.10); border: 1px solid rgba(var(--accent-rgb),0.20);
+  border-radius: var(--radius-pill); padding: 2px 9px; display: inline-block;
+}
+
 /* ── Shared slider (used in ExportPanel) ── */
 .sliderRow { display: flex; flex-direction: column; gap: 5px; }
 .sliderTop { display: flex; justify-content: space-between; }
@@ -464,4 +501,280 @@
   opacity: 1; border-color: var(--accent);
   transform: scale(1.10);
   box-shadow: 0 0 0 2px rgba(255,255,255,0.30), 0 4px 14px rgba(0,0,0,0.42);
+}
+
+/* ── Export float card ── */
+.exportFloat {
+  position: absolute;
+  bottom: 82px; right: 14px;
+  width: 294px;
+  max-height: calc(100vh - 56px - 100px);
+  z-index: 20;
+  display: flex; flex-direction: column;
+  border-radius: 16px; overflow: hidden;
+  animation: efSlideIn 200ms cubic-bezier(0.34,1.56,0.64,1);
+
+  backdrop-filter: blur(32px) saturate(200%) brightness(1.10);
+  -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.10);
+  background: rgba(12,8,24,0.88);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.20),
+    inset 0 -1px 0 rgba(0,0,0,0.18),
+    0 28px 70px rgba(0,0,0,0.70),
+    0 6px 20px rgba(0,0,0,0.40);
+}
+
+@keyframes efSlideIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.efHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px 10px; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, transparent 100%);
+}
+
+.efTitle {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--text-2);
+}
+.efTitle svg { opacity: 0.65; }
+
+.efClose {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-3); cursor: pointer; transition: all var(--transition);
+}
+.efClose:hover { background: rgba(255,69,58,0.22); color: #ff6b62; }
+
+.efBody {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.efBody::-webkit-scrollbar { width: 3px; }
+.efBody::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 2px; }
+
+.efSection {
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.efSectionTitle {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.10em; color: var(--text-3); margin-bottom: 9px;
+}
+
+.efTitleRow {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px;
+}
+.efTitleRow .efSectionTitle { margin-bottom: 0; }
+
+/* Format */
+.efFmtRow { display: flex; gap: 5px; }
+.efFmtBtn {
+  flex: 1; padding: 7px 4px; border-radius: var(--radius-sm);
+  font-size: 10px; font-weight: 700; color: var(--text-3);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+  transition: all var(--transition); cursor: pointer;
+}
+.efFmtBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
+.efFmtActive {
+  background: rgba(var(--accent-rgb),0.22) !important;
+  border-color: rgba(var(--accent-rgb),0.45) !important;
+  color: var(--accent-text) !important;
+  box-shadow: 0 0 10px rgba(var(--accent-rgb),0.15);
+}
+
+/* Quality row */
+.efQualRow { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.efMetaLabel { font-size: 9px; color: var(--text-3); font-weight: 600; white-space: nowrap; }
+.efMetaVal { font-size: 9px; color: var(--text-3); min-width: 26px; text-align: right; font-weight: 600; }
+
+.efRange {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 3px; border-radius: 2px; background: rgba(255,255,255,0.13);
+  outline: none; cursor: pointer;
+  accent-color: rgba(var(--accent-rgb), 0.9);
+}
+.efRange::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: rgba(var(--accent-rgb),0.95); border: 1.5px solid rgba(255,255,255,0.35); cursor: pointer; }
+
+/* Resize chips */
+.efChipRow { display: flex; flex-wrap: wrap; gap: 4px; }
+.efChip {
+  padding: 4px 9px; border-radius: var(--radius-pill);
+  font-size: 9px; font-weight: 700; color: var(--text-2);
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  transition: all var(--transition); cursor: pointer;
+}
+.efChip:hover { background: rgba(255,255,255,0.13); color: var(--text-1); }
+.efChipActive {
+  background: rgba(var(--accent-rgb),0.22) !important;
+  border-color: rgba(var(--accent-rgb),0.45) !important;
+  color: var(--accent-text) !important;
+}
+
+.efCustomRow { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+.efCustomInput {
+  width: 64px; padding: 3px 8px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16);
+  color: var(--text-1); font-size: 11px; font-family: inherit; outline: none;
+  transition: border-color var(--transition);
+}
+.efCustomInput:focus { border-color: rgba(var(--accent-rgb),0.55); }
+.efCustomInput::-webkit-outer-spin-button,
+.efCustomInput::-webkit-inner-spin-button { -webkit-appearance: none; }
+.efCustomInput[type=number] { -moz-appearance: textfield; }
+.efDims {
+  margin-top: 6px; font-size: 9px; font-weight: 700;
+  color: var(--accent-text); letter-spacing: 0.05em;
+}
+
+/* Watermark toggle */
+.efToggle {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 2px 9px; border-radius: var(--radius-pill);
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-3); transition: all 120ms ease; cursor: pointer;
+}
+.efToggle:hover { background: rgba(255,255,255,0.12); color: var(--text-2); }
+.efToggleOn {
+  background: rgba(52,199,89,0.22) !important;
+  border-color: rgba(52,199,89,0.40) !important;
+  color: rgba(140,230,160,0.95) !important;
+}
+
+/* Watermark controls */
+.efWmBox { display: flex; flex-direction: column; gap: 8px; }
+.efWmText {
+  width: 100%; padding: 5px 9px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-1); font-size: 11px; font-family: inherit; outline: none; box-sizing: border-box;
+  transition: border-color var(--transition);
+}
+.efWmText:focus { border-color: rgba(var(--accent-rgb),0.55); }
+
+.efWmLayout { display: flex; gap: 10px; align-items: flex-start; }
+
+.efWmPosGrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-sm); padding: 3px; flex-shrink: 0; width: 66px;
+}
+.efWmPosBtn {
+  aspect-ratio: 1; border-radius: 3px; cursor: pointer;
+  background: rgba(255,255,255,0.05); border: 1.5px solid transparent;
+  transition: all 120ms ease;
+}
+.efWmPosBtn:hover { background: rgba(255,255,255,0.14); }
+.efWmPosActive {
+  background: rgba(var(--accent-rgb),0.32) !important;
+  border-color: rgba(var(--accent-rgb),0.60) !important;
+  box-shadow: 0 0 6px rgba(var(--accent-rgb),0.22);
+}
+
+.efWmControls { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.efWmCtrlRow {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 9px; color: var(--text-3); font-weight: 600;
+}
+.efWmCtrlRow span:first-child { min-width: 36px; }
+.efWmCtrlRow span:last-child { min-width: 22px; text-align: right; }
+.efWmColor {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.28); padding: 0; cursor: pointer; background: none;
+}
+
+/* Location */
+.efLocRow { display: flex; gap: 5px; }
+.efLocBtn {
+  flex: 1; padding: 6px 4px; border-radius: var(--radius-sm);
+  font-size: 9px; font-weight: 700; color: var(--text-3); text-align: center;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+  transition: all var(--transition); cursor: pointer;
+}
+.efLocBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-1); }
+.efLocActive {
+  background: rgba(var(--accent-rgb),0.18) !important;
+  border-color: rgba(var(--accent-rgb),0.38) !important;
+  color: var(--accent-text) !important;
+}
+.efPath {
+  margin-top: 6px; font-size: 9px; color: var(--text-3); line-height: 1.4;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm); padding: 4px 7px; word-break: break-all;
+}
+
+/* Save actions */
+.efActions {
+  padding: 11px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.efSaveBtn {
+  width: 100%; padding: 9px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  background: rgba(52,199,89,0.20); border: 1px solid rgba(52,199,89,0.36);
+  color: rgba(140,230,160,0.95); transition: all var(--transition);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+}
+.efSaveBtn:hover:not(:disabled) { background: rgba(52,199,89,0.32); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 12px rgba(52,199,89,0.20); }
+.efSaveBtn:active:not(:disabled) { transform: scale(0.98); }
+.efSaveBtn:disabled { opacity: 0.30; cursor: default; }
+.efSaveBtnOver {
+  background: rgba(255,149,0,0.16) !important; border-color: rgba(255,149,0,0.30) !important;
+  color: rgba(255,210,120,0.95) !important;
+}
+.efSaveBtnOver:hover:not(:disabled) { background: rgba(255,149,0,0.28) !important; }
+.efMsg { font-size: 10px; text-align: center; color: rgba(140,230,160,0.9); padding: 2px 0; }
+.efMsgErr { color: #ff6b62 !important; }
+.efHint { font-size: 10px; color: var(--text-3); font-style: italic; text-align: center; padding: 2px 0; }
+
+/* ── Watermark section (legacy — kept for backward compat) ── */
+.epLabelRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.epToggle {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 2px 8px; border-radius: var(--radius-pill);
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-3); transition: all 120ms ease; cursor: pointer;
+}
+.epToggle:hover { background: rgba(255,255,255,0.12); color: var(--text-2); }
+.epToggleOn {
+  background: rgba(52,199,89,0.20) !important;
+  border-color: rgba(52,199,89,0.38) !important;
+  color: rgba(140,230,160,0.95) !important;
+}
+.epWmInput {
+  width: 100%; padding: 5px 9px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-1); font-size: 11px; font-family: inherit;
+  outline: none; margin-bottom: 8px;
+  transition: border-color var(--transition);
+  box-sizing: border-box;
+}
+.epWmInput:focus { border-color: rgba(var(--accent-rgb),0.55); }
+.epWmPosGrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-sm); padding: 4px; margin-bottom: 8px;
+}
+.epWmPosBtn {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; cursor: pointer;
+  background: transparent; border: 1px solid transparent;
+  transition: all 120ms ease;
+}
+.epWmPosBtn:hover { background: rgba(255,255,255,0.10); }
+.epWmPosActive { background: rgba(var(--accent-rgb),0.25) !important; border-color: rgba(var(--accent-rgb),0.45) !important; }
+.epWmPosDot { display: block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+.epWmPosActive .epWmPosDot { opacity: 1; background: var(--accent-text); }
+.epWmRow { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.epWmLabel { font-size: 9px; color: var(--text-3); font-weight: 600; min-width: 42px; }
+.epWmRange { flex: 1; accent-color: rgba(var(--accent-rgb),0.9); }
+.epWmVal { font-size: 9px; color: var(--text-3); min-width: 28px; text-align: right; }
+.epWmColor {
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
+  padding: 0; cursor: pointer; background: none;
 }

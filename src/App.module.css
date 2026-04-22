@@ -25,6 +25,26 @@
   transition: filter 120ms ease;
 }
 
+/* ── Animowane tło Three.js (bez overbleed) ── */
+.pillarBg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Ciemna zasłona nad pillar — poprawia czytelność napisów */
+.pillarVeil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 100% 60% at 50% 100%, rgba(0,0,0,0.55) 0%, transparent 80%),
+    radial-gradient(ellipse 80% 50% at 0% 50%, rgba(0,0,0,0.30) 0%, transparent 70%),
+    rgba(0,0,0,0.22);
+  pointer-events: none;
+}
+
 /* Ambient glow overlay */
 .bg::after {
   content: '';

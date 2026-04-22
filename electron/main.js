@@ -1,8 +1,26 @@
 const { app, BrowserWindow, ipcMain, dialog, protocol, net, shell, nativeImage } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const http = require('http')
 const crypto = require('crypto')
+const { execSync, exec } = require('child_process')
 const { pathToFileURL } = require('url')
+
+// ── Dropbox OAuth helpers ─────────────────────────────────────────────────────
+const OAUTH_PORT = 39412   // localhost port for OAuth redirect
+const OAUTH_REDIRECT = `http://localhost:${OAUTH_PORT}/callback`
+
+function pkceVerifier() {
+  return crypto.randomBytes(48).toString('base64url')
+}
+function pkceChallenge(verifier) {
+  return crypto.createHash('sha256').update(verifier).digest('base64url')
+}
+
+function isElevated() {
+  if (process.platform !== 'win32') return process.getuid ? process.getuid() === 0 : true
+  try { execSync('net session', { stdio: 'pipe', timeout: 3000 }); return true } catch { return false }
+}
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.avif'])
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v', '.wmv'])
@@ -164,9 +182,37 @@ app.whenReady().then(() => {
     '.wmv': 'video/x-ms-wmv',
   }
 
-  protocol.handle('gallery', (request) => {
+  // ── Cloud token store (in-memory, restored from renderer on app start) ──
+  const _cloudTokens = new Map() // provider -> token
+
+  protocol.handle('gallery', async (request) => {
     try {
       const url = new URL(request.url)
+
+      // ── Cloud image route: gallery://cloud?provider=dropbox&path=/photo.jpg ──
+      if (url.hostname === 'cloud') {
+        const provider  = url.searchParams.get('provider')
+        const cloudPath = url.searchParams.get('path')
+        const token     = _cloudTokens.get(provider)
+        if (!token || !cloudPath) return new Response('Missing cloud params', { status: 400 })
+
+        if (provider === 'dropbox') {
+          const res = await net.fetch('https://content.dropboxapi.com/2/files/download', {
+            method: 'POST',
+            headers: {
+              'Authorization':    `Bearer ${token}`,
+              'Dropbox-API-Arg':  JSON.stringify({ path: cloudPath }),
+              'Content-Type':     '',
+            }
+          })
+          if (!res.ok) return new Response('Dropbox error', { status: 502 })
+          const ct = res.headers.get('content-type') || 'image/jpeg'
+          return new Response(res.body, { headers: { 'Content-Type': ct } })
+        }
+        return new Response('Unknown provider', { status: 400 })
+      }
+
+      // ── Local image route: gallery://img?p=/path/to/file ──
       const filePath = url.searchParams.get('p')
       if (!filePath) return new Response('Missing path', { status: 400 })
 
@@ -204,6 +250,207 @@ app.whenReady().then(() => {
     } catch (e) {
       return new Response(String(e), { status: 500 })
     }
+  })
+
+  // ── Cloud OAuth ──
+  ipcMain.handle('cloud-oauth-start', (_event, { provider, appKey }) => {
+    return new Promise((resolve) => {
+      if (provider !== 'dropbox') return resolve({ success: false, error: 'Unknown provider' })
+      if (!appKey || !appKey.trim()) return resolve({ success: false, error: 'No App Key provided' })
+
+      const verifier  = pkceVerifier()
+      const challenge = pkceChallenge(verifier)
+      let settled     = false
+      let server      = null
+      let authWin     = null
+
+      function finish(result) {
+        if (settled) return
+        settled = true
+        try { server?.close() } catch {}
+        try { if (authWin && !authWin.isDestroyed()) authWin.close() } catch {}
+        resolve(result)
+      }
+
+      // Temporary HTTP server to catch the OAuth redirect
+      server = http.createServer(async (req, res) => {
+        try {
+          const reqUrl = new URL(req.url, `http://localhost:${OAUTH_PORT}`)
+          const code   = reqUrl.searchParams.get('code')
+          const error  = reqUrl.searchParams.get('error')
+
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+          res.end(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{font-family:-apple-system,sans-serif;background:#0d0820;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px}
+h2{margin:0;font-size:20px}p{margin:0;opacity:.6;font-size:14px}</style></head>
+<body><h2>${error ? '✕ Anulowano' : '✓ Połączono z Dropboxem!'}</h2>
+<p>${error ? 'Możesz zamknąć to okno.' : 'Wróć do Lumina.'}</p>
+<script>setTimeout(()=>window.close(),1800)</script></body></html>`)
+
+          if (error || !code) { finish({ success: false, error: error || 'No code' }); return }
+
+          // Exchange code → access token (PKCE — no secret needed)
+          const tokenRes = await net.fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              code,
+              grant_type:    'authorization_code',
+              redirect_uri:  OAUTH_REDIRECT,
+              client_id:     appKey.trim(),
+              code_verifier: verifier,
+            }).toString(),
+          })
+          const tokenData = await tokenRes.json()
+          if (!tokenRes.ok || !tokenData.access_token) {
+            finish({ success: false, error: tokenData.error_description || tokenData.error || 'Token exchange failed' })
+            return
+          }
+
+          // Fetch account name
+          let accountName = 'Dropbox'
+          try {
+            const accRes  = await net.fetch('https://api.dropboxapi.com/2/users/get_current_account', {
+              method:  'POST',
+              headers: { 'Authorization': `Bearer ${tokenData.access_token}`, 'Content-Type': 'application/json' },
+              body:    'null',
+            })
+            const accData = await accRes.json()
+            accountName   = accData.name?.display_name || accData.email || 'Dropbox'
+          } catch {}
+
+          finish({
+            success:      true,
+            accessToken:  tokenData.access_token,
+            refreshToken: tokenData.refresh_token ?? null,
+            accountName,
+          })
+        } catch (e) {
+          finish({ success: false, error: e.message })
+        }
+      })
+
+      server.on('error', (e) => finish({ success: false, error: e.message }))
+
+      server.listen(OAUTH_PORT, '127.0.0.1', () => {
+        const authUrl =
+          `https://www.dropbox.com/oauth2/authorize` +
+          `?client_id=${encodeURIComponent(appKey.trim())}` +
+          `&response_type=code` +
+          `&token_access_type=offline` +
+          `&redirect_uri=${encodeURIComponent(OAUTH_REDIRECT)}` +
+          `&code_challenge=${encodeURIComponent(challenge)}` +
+          `&code_challenge_method=S256`
+
+        authWin = new BrowserWindow({
+          width:              500,
+          height:             700,
+          title:              'Zaloguj się do Dropbox',
+          autoHideMenuBar:    true,
+          backgroundColor:    '#1a1a1a',
+          webPreferences:     { nodeIntegration: false, contextIsolation: true },
+          parent:             BrowserWindow.getAllWindows()[0] ?? undefined,
+        })
+        authWin.loadURL(authUrl)
+        authWin.on('closed', () => finish({ success: false, error: 'Zamknięto okno logowania' }))
+      })
+    })
+  })
+
+  // Refresh an existing Dropbox token using the refresh_token
+  ipcMain.handle('cloud-refresh-token', async (_event, { provider, appKey, refreshToken }) => {
+    if (provider !== 'dropbox' || !refreshToken || !appKey) return { success: false }
+    try {
+      const res  = await net.fetch('https://api.dropboxapi.com/oauth2/token', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:    new URLSearchParams({
+          grant_type:    'refresh_token',
+          refresh_token: refreshToken,
+          client_id:     appKey.trim(),
+        }).toString(),
+      })
+      const data = await res.json()
+      if (data.access_token) return { success: true, accessToken: data.access_token }
+      return { success: false }
+    } catch { return { success: false } }
+  })
+
+  // ── Cloud storage IPC ──
+  ipcMain.handle('cloud-set-token', (_event, { provider, token }) => {
+    if (token) _cloudTokens.set(provider, token)
+    else _cloudTokens.delete(provider)
+    return true
+  })
+
+  ipcMain.handle('cloud-test-token', async (_event, { provider, token }) => {
+    if (provider === 'dropbox') {
+      try {
+        const res = await net.fetch('https://api.dropboxapi.com/2/users/get_current_account', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: 'null',
+        })
+        if (!res.ok) return { success: false, error: 'Invalid token — check it at dropbox.com/developers/apps' }
+        const data = await res.json()
+        return { success: true, accountName: data.name?.display_name || data.email || 'Dropbox' }
+      } catch (e) {
+        return { success: false, error: e.message }
+      }
+    }
+    return { success: false, error: 'Unknown provider' }
+  })
+
+  ipcMain.handle('cloud-list-folder', async (_event, { provider, path: folderPath }) => {
+    const token = _cloudTokens.get(provider)
+    if (!token) return { success: false, error: 'Not connected' }
+    if (provider === 'dropbox') {
+      try {
+        const res = await net.fetch('https://api.dropboxapi.com/2/files/list_folder', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type':  'application/json',
+          },
+          body: JSON.stringify({
+            path:               folderPath || '',
+            recursive:          false,
+            include_media_info: true,
+            limit:              300,
+          }),
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          return { success: false, error: text }
+        }
+        const data = await res.json()
+        return { success: true, entries: data.entries, cursor: data.cursor, hasMore: data.has_more }
+      } catch (e) {
+        return { success: false, error: e.message }
+      }
+    }
+    return { success: false, error: 'Unknown provider' }
+  })
+
+  ipcMain.handle('cloud-get-thumb', async (_event, { provider, path: filePath }) => {
+    const token = _cloudTokens.get(provider)
+    if (!token) return null
+    if (provider === 'dropbox') {
+      try {
+        const res = await net.fetch('https://content.dropboxapi.com/2/files/get_thumbnail', {
+          method: 'POST',
+          headers: {
+            'Authorization':   `Bearer ${token}`,
+            'Dropbox-API-Arg': JSON.stringify({ path: filePath, format: 'jpeg', size: 'w256h256' }),
+            'Content-Type':    '',
+          },
+        })
+        if (!res.ok) return null
+        const buf = Buffer.from(await res.arrayBuffer())
+        return 'data:image/jpeg;base64,' + buf.toString('base64')
+      } catch { return null }
+    }
+    return null
   })
 
   createWindow()
@@ -731,4 +978,224 @@ ipcMain.handle('pick-wallpaper', async () => {
     filters: [{ name: 'Obrazy', extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'bmp'] }]
   })
   return result.canceled ? null : result.filePaths[0]
+})
+
+// ── Disk Manager ─────────────────────────────────────────────────────────────
+
+ipcMain.handle('get-disks', async () => {
+  try {
+    const { execSync } = require('child_process')
+    if (process.platform === 'win32') {
+      const out = execSync(
+        'powershell -NoProfile -Command "Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Root} | Select-Object Name,Used,Free,Root | ConvertTo-Json"',
+        { timeout: 8000 }
+      ).toString()
+      const data = JSON.parse(out)
+      const arr = Array.isArray(data) ? data : [data]
+      return arr.filter(d => d.Used != null || d.Free != null).map(d => ({
+        name:  d.Name,
+        root:  d.Root,
+        used:  Number(d.Used  ?? 0),
+        free:  Number(d.Free  ?? 0),
+        total: Number(d.Used ?? 0) + Number(d.Free ?? 0),
+      }))
+    } else {
+      const out = execSync("df -k / | tail -1").toString().trim().split(/\s+/)
+      const total = Number(out[1]) * 1024
+      const used  = Number(out[2]) * 1024
+      return [{ name: 'disk', root: '/', used, free: total - used, total }]
+    }
+  } catch (e) { return [] }
+})
+
+ipcMain.handle('get-large-files', async (_e, folderPath, limit = 30) => {
+  const results = []
+  function walk(dir, depth) {
+    if (depth > 6) return
+    let entries
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) { walk(full, depth + 1) }
+      else if (e.isFile()) {
+        try {
+          const st = fs.statSync(full)
+          results.push({ path: full, name: e.name, size: st.size })
+        } catch {}
+      }
+    }
+  }
+  walk(folderPath, 0)
+  results.sort((a, b) => b.size - a.size)
+  return results.slice(0, limit)
+})
+
+ipcMain.handle('find-duplicates', async (_e, folderPath) => {
+  const bySize = new Map()
+  function walk(dir, depth) {
+    if (depth > 6) return
+    let entries
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) { walk(full, depth + 1) }
+      else if (e.isFile()) {
+        try {
+          const st = fs.statSync(full)
+          if (st.size < 1024) continue // skip tiny files
+          const key = String(st.size)
+          if (!bySize.has(key)) bySize.set(key, [])
+          bySize.get(key).push({ path: full, name: e.name, size: st.size })
+        } catch {}
+      }
+    }
+  }
+  walk(folderPath, 0)
+
+  const groups = []
+  for (const [, files] of bySize) {
+    if (files.length < 2) continue
+    // hash first 64 KB to confirm duplicate
+    const byHash = new Map()
+    for (const f of files) {
+      try {
+        const fd = fs.openSync(f.path, 'r')
+        const buf = Buffer.alloc(Math.min(65536, f.size))
+        fs.readSync(fd, buf, 0, buf.length, 0)
+        fs.closeSync(fd)
+        const h = crypto.createHash('md5').update(buf).digest('hex')
+        if (!byHash.has(h)) byHash.set(h, [])
+        byHash.get(h).push(f)
+      } catch {}
+    }
+    for (const [, group] of byHash) {
+      if (group.length > 1) groups.push(group)
+    }
+  }
+  groups.sort((a, b) => b[0].size * b.length - a[0].size * a.length)
+  return groups.slice(0, 50)
+})
+
+ipcMain.handle('is-elevated', () => isElevated())
+
+ipcMain.handle('relaunch-as-admin', () => {
+  if (process.platform !== 'win32') return
+  const exePath = process.execPath.replace(/'/g, "''")
+  const args    = process.argv.slice(1).map(a => `'${a.replace(/'/g, "''")}'`).join(', ')
+  const argsStr = args ? `-ArgumentList @(${args})` : ''
+  exec(`powershell -Command "Start-Process -FilePath '${exePath}' ${argsStr} -Verb RunAs"`)
+  setTimeout(() => app.quit(), 500)
+})
+
+ipcMain.handle('scan-folder-tree', async (_e, rootPath) => {
+  // Only skip true system/unreadable roots — NOT user folders with $ in the name
+  const SKIP_ROOT = new Set([
+    '$Recycle.Bin', 'System Volume Information', '$WINDOWS.~BT',
+    '$WinREAgent', 'Recovery', 'Config.Msi', 'MSOCache',
+  ])
+
+  function walk(dir, isRoot) {
+    const node = { name: path.basename(dir) || dir, path: dir, size: 0, children: [] }
+    let entries
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return node }
+    for (const e of entries) {
+      // At root level skip Windows system junk; deeper — skip nothing by name
+      if (isRoot && (SKIP_ROOT.has(e.name) || e.name.startsWith('$'))) continue
+      const full = path.join(dir, e.name)
+      try {
+        // Skip reparse points / junctions to avoid infinite loops
+        const st = fs.lstatSync(full)
+        if (st.isSymbolicLink()) continue
+        if (e.isFile()) {
+          node.size += st.size
+        } else if (e.isDirectory()) {
+          const child = walk(full, false)
+          node.size += child.size
+          node.children.push(child)
+        }
+      } catch {}
+    }
+    node.children.sort((a, b) => b.size - a.size)
+    return node
+  }
+
+  return walk(rootPath, true)
+})
+
+// ── Folder & file management ──────────────────────────────────────────────────
+
+ipcMain.handle('create-folder', async (_event, { parentPath, name }) => {
+  try {
+    const full = path.join(parentPath, name.trim())
+    if (fs.existsSync(full)) return { success: false, error: 'exists' }
+    fs.mkdirSync(full)
+    return { success: true, path: full }
+  } catch (e) {
+    return { success: false, error: e.message }
+  }
+})
+
+ipcMain.handle('move-items', async (_event, { items, dest }) => {
+  const failed = []
+  for (const item of items) {
+    try {
+      const base    = path.basename(item.src)
+      const newPath = path.join(dest, base)
+      if (item.src === newPath) continue
+      moveFile(item.src, newPath)
+    } catch (e) {
+      failed.push({ path: item.src, error: e.message })
+    }
+  }
+  return { success: failed.length === 0, failed }
+})
+
+ipcMain.handle('rename-item', async (_event, { src, newName }) => {
+  try {
+    const dir     = path.dirname(src)
+    const newPath = path.join(dir, newName.trim())
+    if (fs.existsSync(newPath)) return { success: false, error: 'exists' }
+    fs.renameSync(src, newPath)
+    return { success: true, newPath }
+  } catch (e) {
+    return { success: false, error: e.message }
+  }
+})
+
+ipcMain.handle('trash-folder', async (_event, folderPath) => {
+  try {
+    await shell.trashItem(folderPath)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e.message }
+  }
+})
+
+// batch-rename: renames multiple files using a pattern
+// items: [{ path, name, ext, mtime }], pattern: string with {name}/{n}/{date}/{ext}
+ipcMain.handle('batch-rename', async (_event, { items, pattern }) => {
+  const path = require('path')
+  const fs   = require('fs')
+  const results = []
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]
+    const dir  = path.dirname(item.path)
+    const date = new Date(item.mtime).toISOString().slice(0, 10)
+    const newName = pattern
+      .replace(/\{name\}/g, path.parse(item.name).name)
+      .replace(/\{n\}/g,    String(i + 1).padStart(String(items.length).length, '0'))
+      .replace(/\{date\}/g, date)
+      .replace(/\{ext\}/g,  item.ext ? item.ext.replace(/^\./, '') : '')
+    const finalName = newName.endsWith('.' + item.ext?.replace(/^\./, ''))
+      ? newName
+      : `${newName}.${item.ext?.replace(/^\./, '') ?? ''}`
+    const newPath = path.join(dir, finalName)
+    try {
+      fs.renameSync(item.path, newPath)
+      results.push({ ok: true, oldPath: item.path, newPath })
+    } catch (e) {
+      results.push({ ok: false, oldPath: item.path, error: e.message })
+    }
+  }
+  return results
 })

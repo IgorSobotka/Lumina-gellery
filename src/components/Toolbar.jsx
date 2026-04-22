@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLang, useLangCode, photoCountOf } from '../i18n/index'
 import { tagColor } from '../utils/tags'
+import { LABEL_COLORS, LABEL_ORDER } from '../utils/labels'
 import styles from './Toolbar.module.css'
 
 function ListIcon() {
@@ -19,20 +20,30 @@ function GridIcon() {
   </svg>
 }
 
-export default function Toolbar({ folder, albumName, count, total, gridSize, onGridSize, sortBy, onSort, search, onSearch, showSubfolders, onToggleSubfolders, subfolderCount, availableTags, tagFilter, onTagFilter, viewMode, onViewMode }) {
+export default function Toolbar({ folder, albumName, count, total, gridSize, onGridSize, sortBy, onSort, search, onSearch, showSubfolders, onToggleSubfolders, subfolderCount, availableTags, tagFilter, onTagFilter, viewMode, onViewMode, labelFilter, onLabelFilter, onSlideshow, smartFilter, onSmartFilter }) {
   const t    = useLang()
   const lang = useLangCode()
   const folderName = albumName ?? (folder ? folder.split(/[\\/]/).pop() : '')
   const [tagOpen, setTagOpen] = useState(false)
   const tagRef = useRef(null)
+  const [sfOpen, setSfOpen] = useState(false)
+  const sfRef = useRef(null)
 
-  // Close dropdown on outside click
+  // Close tag dropdown on outside click
   useEffect(() => {
     if (!tagOpen) return
     const handler = (e) => { if (tagRef.current && !tagRef.current.contains(e.target)) setTagOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [tagOpen])
+
+  // Close smart filter panel on outside click
+  useEffect(() => {
+    if (!sfOpen) return
+    const handler = (e) => { if (sfRef.current && !sfRef.current.contains(e.target)) setSfOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [sfOpen])
 
   const toggleTag = (tag) => {
     onTagFilter(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
@@ -122,6 +133,53 @@ export default function Toolbar({ folder, albumName, count, total, gridSize, onG
           </div>
         )}
 
+        {/* Label filter */}
+        {onLabelFilter && (
+          <div className={styles.labelFilterWrap}>
+            {LABEL_ORDER.map(color => (
+              <button
+                key={color}
+                className={`${styles.labelFilterBtn} ${labelFilter === color ? styles.labelFilterActive : ''}`}
+                style={{ '--lc': LABEL_COLORS[color].dot }}
+                title={t(`label${color.charAt(0).toUpperCase() + color.slice(1)}`)}
+                onClick={() => onLabelFilter(labelFilter === color ? null : color)}
+              >
+                <span className={styles.labelFilterDot} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Smart Filter */}
+        {onSmartFilter && (() => {
+          const activeCount = Object.values(smartFilter ?? {}).filter(Boolean).length
+          return (
+            <div ref={sfRef} className={styles.sfWrap}>
+              <button
+                className={`${styles.iconToggle} ${activeCount > 0 ? styles.active : ''}`}
+                onClick={() => setSfOpen(v => !v)}
+                title={t('smartFilter')}
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M1 3h14M3 7h10M6 11h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                {activeCount > 0 ? activeCount : ''}
+              </button>
+              {sfOpen && <SmartFilterPanel filter={smartFilter} onChange={onSmartFilter} onClose={() => setSfOpen(false)} t={t} />}
+            </div>
+          )
+        })()}
+
+        {/* Slideshow */}
+        {onSlideshow && (
+          <button className={styles.iconToggle} onClick={onSlideshow} title={t('slideshowStart')}>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M6.5 5.5l5 2.5-5 2.5V5.5z" fill="currentColor"/>
+            </svg>
+          </button>
+        )}
+
         <button
           className={`${styles.iconToggle} ${viewMode === 'list' ? styles.active : ''}`}
           onClick={() => onViewMode(viewMode === 'list' ? 'grid' : 'list')}
@@ -154,6 +212,67 @@ export default function Toolbar({ folder, albumName, count, total, gridSize, onG
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function SmartFilterPanel({ filter, onChange, onClose, t }) {
+  const set = (key, val) => onChange({ ...filter, [key]: val === filter[key] ? null : val })
+  const activeCount = Object.values(filter ?? {}).filter(Boolean).length
+
+  return (
+    <div className={styles.sfPanel}>
+      <div className={styles.sfTitle}>{t('smartFilter')}</div>
+
+      {/* Orientation */}
+      <div className={styles.sfSection}>
+        <div className={styles.sfSectionLabel}>{t('sfOrientation')}</div>
+        <div className={styles.sfChips}>
+          {[['landscape','sfLandscape'],['portrait','sfPortrait'],['square','sfSquare']].map(([val, key]) => (
+            <button key={val} className={`${styles.sfChip} ${filter.orientation === val ? styles.sfChipActive : ''}`}
+              onClick={() => set('orientation', val)}>{t(key)}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Type */}
+      <div className={styles.sfSection}>
+        <div className={styles.sfSectionLabel}>{t('sfType')}</div>
+        <div className={styles.sfChips}>
+          {[['photos','sfPhotos'],['videos','sfVideos']].map(([val, key]) => (
+            <button key={val} className={`${styles.sfChip} ${filter.type === val ? styles.sfChipActive : ''}`}
+              onClick={() => set('type', val)}>{t(key)}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Size */}
+      <div className={styles.sfSection}>
+        <div className={styles.sfSectionLabel}>{t('sfSize')}</div>
+        <div className={styles.sfChips}>
+          {[['tiny','sfTiny'],['small','sfSmall'],['medium','sfMedium'],['large','sfLarge']].map(([val, key]) => (
+            <button key={val} className={`${styles.sfChip} ${filter.sizeRange === val ? styles.sfChipActive : ''}`}
+              onClick={() => set('sizeRange', val)}>{t(key)}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Date */}
+      <div className={styles.sfSection}>
+        <div className={styles.sfSectionLabel}>{t('sfDate')}</div>
+        <div className={styles.sfChips}>
+          {[['today','sfToday'],['thisweek','sfThisWeek'],['thismonth','sfThisMonth'],['thisyear','sfThisYear']].map(([val, key]) => (
+            <button key={val} className={`${styles.sfChip} ${filter.dateRange === val ? styles.sfChipActive : ''}`}
+              onClick={() => set('dateRange', val)}>{t(key)}</button>
+          ))}
+        </div>
+      </div>
+
+      {activeCount > 0 && (
+        <button className={styles.sfClearBtn} onClick={() => { onChange({ orientation: null, type: null, sizeRange: null, dateRange: null }); onClose() }}>
+          {t('sfClearAll')}
+        </button>
+      )}
     </div>
   )
 }

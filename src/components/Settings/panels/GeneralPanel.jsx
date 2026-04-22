@@ -17,7 +17,7 @@ const LANGUAGES = [
 export default function GeneralPanel({ settings, onSettingsChange }) {
   const t          = useLang()
   const lang       = useLangCode()
-  const current    = settings.language   ?? 'pl'
+  const current    = settings.language   ?? 'en'
   const openMode   = settings.openMode   ?? 'last'
   const openPath   = settings.openPath   ?? null
   const isSpecific = openMode === 'specific'

@@ -93,16 +93,37 @@ function Section({ label, rightAction, defaultOpen = true, children }) {
   )
 }
 
+function CloudIcon({ provider }) {
+  if (provider === 'dropbox') {
+    return (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+        <path d="M6 2L12 6.5 6 11 0 6.5 6 2zM18 2l6 4.5-6 4.5-6-4.5L18 2zM0 17.5L6 13l6 4.5-6 4.5-6-4.5zM18 13l6 4.5-6 4.5-6-4.5L18 13z" fill="#0061ff"/>
+      </svg>
+    )
+  }
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1a7 7 0 100 14A7 7 0 008 1z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+      <path d="M3 8c0-2 2-5 5-5s5 3 5 5-2 5-5 5-5-3-5-5z" fill="none"/>
+    </svg>
+  )
+}
+
 export default function Sidebar({
   folder, subfolders, recent, favorites,
   albums, albumView,
   onOpenFolder, onGoUp, onOpenDialog, onOpenSettings, onToggleFavorite,
   onOpenAlbum, onDeleteAlbum, onCreateAlbum,
-  trashCount = 0, onOpenTrash, onOpenPrivate,
+  trashCount = 0, onOpenTrash, onOpenPrivate, onOpenDisk,
+  addons = {}, onOpenCloud,
 }) {
   const t           = useLang()
   const favSet      = new Set(favorites ?? [])
   const albumList   = Object.values(albums ?? {})
+  // Connected cloud providers
+  const cloudList   = Object.entries(addons)
+    .filter(([, v]) => !!v)
+    .map(([id, data]) => ({ id, ...data }))
   const [newAlbumInput, setNewAlbumInput] = useState(false)
   const [newAlbumName, setNewAlbumName]   = useState('')
 
@@ -258,6 +279,26 @@ export default function Sidebar({
         </Section>
       )}
 
+      {/* ── Cloud storage ── */}
+      {cloudList.length > 0 && (
+        <Section label={t('cloudSec')} defaultOpen={true}>
+          <div className={styles.list}>
+            {cloudList.map(cloud => (
+              <div key={cloud.id} className={styles.itemRow}>
+                <button
+                  className={styles.item}
+                  onClick={() => onOpenCloud?.(cloud.id)}
+                  title={cloud.accountName || cloud.id}
+                >
+                  <CloudIcon provider={cloud.id} />
+                  <span className={styles.itemLabel}>{cloud.accountName || cloud.id}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       <div className={styles.bottom}>
         <button className={styles.settingsBtn} onClick={onOpenPrivate}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -266,6 +307,14 @@ export default function Sidebar({
             <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           {t('pvTitle')}
+        </button>
+        <button className={styles.settingsBtn} onClick={onOpenDisk}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="6" width="20" height="12" rx="3" stroke="currentColor" strokeWidth="1.4"/>
+            <circle cx="17" cy="12" r="1.5" fill="currentColor" opacity="0.7"/>
+            <circle cx="13" cy="12" r="1.5" fill="currentColor" opacity="0.4"/>
+          </svg>
+          {t('diskBtn')}
         </button>
         <button className={styles.settingsBtn} onClick={onOpenTrash}>
           <TrashIcon />

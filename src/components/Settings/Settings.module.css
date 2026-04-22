@@ -69,7 +69,10 @@
   z-index: 1;
 
   border-right: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.08);
+  background: linear-gradient(160deg,
+    rgba(255,255,255,0.05) 0%,
+    rgba(0,0,0,0.10) 100%
+  );
 }
 
 /* Vertical specular on right edge */
@@ -89,7 +92,9 @@
   font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.09em;
   color: var(--text-3);
-  padding: 4px 10px 10px;
+  padding: 4px 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 4px;
 }
 
 .navItem {
@@ -98,7 +103,9 @@
   font-size: 13px; font-weight: 500; color: var(--text-2);
   text-align: left; width: 100%;
   border: 1px solid transparent;
-  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  position: relative;
+  transition: background var(--transition), color var(--transition),
+              border-color var(--transition), transform 120ms ease;
   cursor: pointer;
 }
 
@@ -106,16 +113,33 @@
   background: rgba(255,255,255,0.09);
   border-color: rgba(255,255,255,0.12);
   color: var(--text-1);
+  transform: translateX(1px);
 }
 
 .navActive {
-  background: rgba(var(--accent-rgb),0.22) !important;
-  border-color: rgba(var(--accent-rgb),0.35) !important;
-  color: rgba(220,170,255,0.95) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+  background: rgba(var(--accent-rgb),0.18) !important;
+  border-color: rgba(var(--accent-rgb),0.32) !important;
+  color: var(--accent-text) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 3px 0 0 rgba(var(--accent-rgb),0.80);
+  transform: none !important;
 }
 
 .navDisabled { opacity: 0.40; cursor: default; }
+
+.navFooter {
+  margin-top: auto;
+  padding: 10px 10px 2px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.navVersion {
+  font-size: 10px; font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
 
 .navIcon { display: flex; flex-shrink: 0; }
 .navLabel { flex: 1; }
@@ -142,6 +166,7 @@
   padding: 20px 24px 16px;
   border-bottom: 1px solid rgba(255,255,255,0.09);
   flex-shrink: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, transparent 100%);
 }
 
 .contentTitle {
@@ -166,4 +191,13 @@
 
 .contentBody {
   flex: 1; overflow-y: auto; padding: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.14) transparent;
 }
+.contentBody::-webkit-scrollbar { width: 5px; }
+.contentBody::-webkit-scrollbar-track { background: transparent; }
+.contentBody::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.14);
+  border-radius: 3px;
+}
+.contentBody::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }

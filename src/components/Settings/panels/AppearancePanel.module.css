@@ -12,14 +12,44 @@
 }
 
 .sectionTitle {
-  font-size: 12px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em;
   color: var(--text-3);
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .sectionDesc {
   font-size: 12px; color: var(--text-3);
   margin-top: -6px;
+}
+
+/* ── Wallpaper group label ── */
+.wallpaperGroupLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-3);
+  opacity: 0.7;
+  margin-bottom: -4px;
+}
+
+/* ── Pillar badge ── */
+.pillarBadge {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.85);
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  padding: 1px 5px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
 }
 
 /* ── Wallpaper grid ── */

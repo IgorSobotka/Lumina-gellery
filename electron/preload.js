@@ -41,6 +41,27 @@ contextBridge.exposeInMainWorld('api', {
   privateDeleteFolder: (name)        => ipcRenderer.invoke('private-delete-folder', name),
   privateMoveToFolder: (file, folder) => ipcRenderer.invoke('private-move-to-folder', file, folder),
 
+  // Cloud storage
+  cloudSetToken:    (provider, token)                  => ipcRenderer.invoke('cloud-set-token',    { provider, token }),
+  cloudTestToken:   (provider, token)                  => ipcRenderer.invoke('cloud-test-token',   { provider, token }),
+  cloudOAuthStart:  (provider, appKey)                 => ipcRenderer.invoke('cloud-oauth-start',  { provider, appKey }),
+  cloudRefreshToken:(provider, appKey, refreshToken)   => ipcRenderer.invoke('cloud-refresh-token',{ provider, appKey, refreshToken }),
+  cloudListFolder:  (provider, folderPath)             => ipcRenderer.invoke('cloud-list-folder',  { provider, path: folderPath }),
+  cloudGetThumb:    (provider, filePath)               => ipcRenderer.invoke('cloud-get-thumb',    { provider, path: filePath }),
+
+  batchRename:     (items, pattern)   => ipcRenderer.invoke('batch-rename', { items, pattern }),
+  createFolder:    (parentPath, name) => ipcRenderer.invoke('create-folder', { parentPath, name }),
+  moveItems:       (items, dest)      => ipcRenderer.invoke('move-items',    { items, dest }),
+  renameItem:      (src, newName)     => ipcRenderer.invoke('rename-item',   { src, newName }),
+  trashFolder:     (folderPath)       => ipcRenderer.invoke('trash-folder',  folderPath),
+
+  getDisks:        ()              => ipcRenderer.invoke('get-disks'),
+  getLargeFiles:   (p, limit)     => ipcRenderer.invoke('get-large-files', p, limit),
+  findDuplicates:  (p)            => ipcRenderer.invoke('find-duplicates', p),
+  scanFolderTree:  (p)            => ipcRenderer.invoke('scan-folder-tree', p),
+  isElevated:      ()             => ipcRenderer.invoke('is-elevated'),
+  relaunchAsAdmin: ()             => ipcRenderer.invoke('relaunch-as-admin'),
+
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),
   windowClose:    () => ipcRenderer.send('window-close'),

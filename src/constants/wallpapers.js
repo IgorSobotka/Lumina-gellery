@@ -1,7 +1,86 @@
 export const WALLPAPERS = {
+  // ── Animated Light Pillar presets ──
+  pillar_aurora: {
+    id: 'pillar_aurora',
+    label: 'Aurora',
+    type: 'pillar',
+    topColor: '#9438DC',
+    bottomColor: '#FF5A32',
+    pillarWidth: 3.0,
+    glowAmount: 0.005,
+    preview: ['#9438DC', '#FF5A32'],
+  },
+
+  pillar_midnight: {
+    id: 'pillar_midnight',
+    label: 'Midnight',
+    type: 'pillar',
+    topColor: '#1E3CFF',
+    bottomColor: '#00C8FF',
+    pillarWidth: 3.2,
+    glowAmount: 0.005,
+    preview: ['#1E3CFF', '#00C8FF'],
+  },
+
+  pillar_forest: {
+    id: 'pillar_forest',
+    label: 'Forest',
+    type: 'pillar',
+    topColor: '#00B060',
+    bottomColor: '#A0FF6E',
+    pillarWidth: 2.8,
+    glowAmount: 0.006,
+    preview: ['#00B060', '#A0FF6E'],
+  },
+
+  pillar_sunset: {
+    id: 'pillar_sunset',
+    label: 'Sunset',
+    type: 'pillar',
+    topColor: '#FF1E78',
+    bottomColor: '#FF9500',
+    pillarWidth: 3.0,
+    glowAmount: 0.005,
+    preview: ['#FF1E78', '#FF9500'],
+  },
+
+  pillar_nebula: {
+    id: 'pillar_nebula',
+    label: 'Nebula',
+    type: 'pillar',
+    topColor: '#C800FF',
+    bottomColor: '#00DCE8',
+    pillarWidth: 3.4,
+    glowAmount: 0.006,
+    preview: ['#C800FF', '#00DCE8'],
+  },
+
+  pillar_ocean: {
+    id: 'pillar_ocean',
+    label: 'Ocean',
+    type: 'pillar',
+    topColor: '#0055FF',
+    bottomColor: '#00FFD4',
+    pillarWidth: 2.6,
+    glowAmount: 0.005,
+    preview: ['#0055FF', '#00FFD4'],
+  },
+
+  pillar_volcanic: {
+    id: 'pillar_volcanic',
+    label: 'Volcanic',
+    type: 'pillar',
+    topColor: '#8B0000',
+    bottomColor: '#FF6600',
+    pillarWidth: 3.0,
+    glowAmount: 0.006,
+    preview: ['#8B0000', '#FF6600'],
+  },
+
+  // ── Static gradient presets ──
   aurora: {
     id: 'aurora',
-    label: 'Aurora',
+    label: 'Aurora ✦',
     background: `
       radial-gradient(ellipse 80% 60% at 15% 40%,  rgba(148,56,220,0.72) 0%, transparent 60%),
       radial-gradient(ellipse 60% 50% at 85% 15%,  rgba(255,90,50,0.55)  0%, transparent 55%),
@@ -20,7 +99,7 @@ export const WALLPAPERS = {
 
   midnight: {
     id: 'midnight',
-    label: 'Midnight',
+    label: 'Midnight ✦',
     background: `
       radial-gradient(ellipse 70% 60% at 20% 30%,  rgba(30,60,220,0.65)  0%, transparent 60%),
       radial-gradient(ellipse 50% 50% at 80% 70%,  rgba(0,120,255,0.50)  0%, transparent 55%),
@@ -38,7 +117,7 @@ export const WALLPAPERS = {
 
   forest: {
     id: 'forest',
-    label: 'Forest',
+    label: 'Forest ✦',
     background: `
       radial-gradient(ellipse 70% 60% at 10% 60%,  rgba(0,140,80,0.70)   0%, transparent 60%),
       radial-gradient(ellipse 55% 50% at 80% 20%,  rgba(0,200,140,0.55)  0%, transparent 55%),
@@ -56,7 +135,7 @@ export const WALLPAPERS = {
 
   sunset: {
     id: 'sunset',
-    label: 'Sunset',
+    label: 'Sunset ✦',
     background: `
       radial-gradient(ellipse 75% 55% at 20% 35%,  rgba(255,60,120,0.70)  0%, transparent 60%),
       radial-gradient(ellipse 60% 55% at 80% 20%,  rgba(255,140,0,0.65)   0%, transparent 55%),
@@ -74,7 +153,7 @@ export const WALLPAPERS = {
 
   obsidian: {
     id: 'obsidian',
-    label: 'Obsidian',
+    label: 'Obsidian ✦',
     background: `
       radial-gradient(ellipse 60% 50% at 25% 40%,  rgba(60,60,80,0.50)   0%, transparent 60%),
       radial-gradient(ellipse 50% 45% at 75% 65%,  rgba(40,40,60,0.40)   0%, transparent 55%),
@@ -91,7 +170,7 @@ export const WALLPAPERS = {
 
   nebula: {
     id: 'nebula',
-    label: 'Nebula',
+    label: 'Nebula ✦',
     background: `
       radial-gradient(ellipse 65% 55% at 15% 50%,  rgba(200,0,255,0.65)  0%, transparent 60%),
       radial-gradient(ellipse 55% 50% at 85% 20%,  rgba(0,220,255,0.60)  0%, transparent 55%),
@@ -109,4 +188,4 @@ export const WALLPAPERS = {
   },
 }
 
-export const DEFAULT_WALLPAPER = 'aurora'
+export const DEFAULT_WALLPAPER = 'pillar_aurora'

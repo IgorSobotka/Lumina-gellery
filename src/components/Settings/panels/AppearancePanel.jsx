@@ -4,6 +4,36 @@ import { ACCENTS } from '../../../utils/accent'
 import { useRef } from 'react'
 import styles from './AppearancePanel.module.css'
 
+const pillarWallpapers  = Object.values(WALLPAPERS).filter(w => w.type === 'pillar')
+const staticWallpapers  = Object.values(WALLPAPERS).filter(w => w.type !== 'pillar')
+
+function WallpaperCard({ wp, current, onSelect }) {
+  const isPillar = wp.type === 'pillar'
+  const swatchStyle = isPillar
+    ? { background: `linear-gradient(135deg, ${wp.topColor} 0%, ${wp.bottomColor} 100%)` }
+    : { background: wp.background }
+
+  return (
+    <button
+      className={`${styles.wallpaperCard} ${current === wp.id ? styles.selected : ''}`}
+      onClick={() => onSelect(wp.id)}
+      title={wp.label}
+    >
+      <div className={styles.swatch} style={swatchStyle}>
+        {isPillar && <div className={styles.pillarBadge}>3D</div>}
+        {current === wp.id && (
+          <div className={styles.checkmark}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        )}
+      </div>
+      <span className={styles.wallpaperLabel}>{wp.label}</span>
+    </button>
+  )
+}
+
 export default function AppearancePanel({ settings, onSettingsChange }) {
   const t = useLang()
   const current      = settings.wallpaper
@@ -17,6 +47,8 @@ export default function AppearancePanel({ settings, onSettingsChange }) {
     if (p) onSettingsChange({ ...settings, wallpaper: 'custom', customWallpaperPath: p })
   }
 
+  const setWallpaper = (id) => onSettingsChange({ ...settings, wallpaper: id })
+
   return (
     <div className={styles.panel}>
 
@@ -25,25 +57,19 @@ export default function AppearancePanel({ settings, onSettingsChange }) {
         <div className={styles.sectionTitle}>{t('wallpaperSec')}</div>
         <div className={styles.sectionDesc}>{t('wallpaperDesc')}</div>
 
+        {/* Animated pillars */}
+        <div className={styles.wallpaperGroupLabel}>{t('wallpaperAnimated')}</div>
         <div className={styles.wallpaperGrid}>
-          {Object.values(WALLPAPERS).map(wp => (
-            <button
-              key={wp.id}
-              className={`${styles.wallpaperCard} ${current === wp.id ? styles.selected : ''}`}
-              onClick={() => onSettingsChange({ ...settings, wallpaper: wp.id })}
-              title={wp.label}
-            >
-              <div className={styles.swatch} style={{ background: wp.background }}>
-                {current === wp.id && (
-                  <div className={styles.checkmark}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                )}
-              </div>
-              <span className={styles.wallpaperLabel}>{wp.label}</span>
-            </button>
+          {pillarWallpapers.map(wp => (
+            <WallpaperCard key={wp.id} wp={wp} current={current} onSelect={setWallpaper} />
+          ))}
+        </div>
+
+        {/* Static gradients */}
+        <div className={styles.wallpaperGroupLabel} style={{ marginTop: 8 }}>{t('wallpaperStatic')}</div>
+        <div className={styles.wallpaperGrid}>
+          {staticWallpapers.map(wp => (
+            <WallpaperCard key={wp.id} wp={wp} current={current} onSelect={setWallpaper} />
           ))}
 
           {/* Custom image card */}
